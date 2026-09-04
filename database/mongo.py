@@ -188,3 +188,31 @@ async def get_welcome_text(chat_id: int) -> str:
         data = _read()
         entry = data.get("welcome", {}).get(str(chat_id), {})
         return entry.get("text") or DEFAULT_WELCOME_TEXT
+
+
+# ===================== Global Auto-Reply (bro targets) =====================
+async def add_bro_target(user_id: int):
+    async with _lock:
+        data = _read()
+        data.setdefault("bro_targets", [])
+        if user_id not in data["bro_targets"]:
+            data["bro_targets"].append(user_id)
+        _write(data)
+
+
+async def remove_bro_target(user_id: int):
+    async with _lock:
+        data = _read()
+        data.setdefault("bro_targets", [])
+        data["bro_targets"] = [u for u in data["bro_targets"] if u != user_id]
+        _write(data)
+
+
+async def get_bro_targets() -> list[int]:
+    async with _lock:
+        return list(_read().get("bro_targets", []))
+
+
+async def is_bro_target(user_id: int) -> bool:
+    async with _lock:
+        return user_id in _read().get("bro_targets", [])
