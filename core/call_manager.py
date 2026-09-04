@@ -1,21 +1,7 @@
 """
 Per-client PyTgCalls management — every account has its OWN VC engine.
 
-Previously there was a single global PyTgCalls instance bound to one
-client (assistant or app), so music from a clone/login'd account actually
-played through the ORIGINAL account's voice-chat connection. Now each
-client (main app, or any account added via .login/.clone) gets its own
-PyTgCalls instance, lazily created and started on first use, so every
-logged-in account can independently join/play in voice chats.
-
-Special case: the main `app` client still delegates to `assistant` (if
-configured via ASSISTANT_SESSION) to avoid tying up the main account —
-this matches the original design. Any OTHER client (a clone or a
-.login'd account) always uses itself, since that's the whole point of
-that account being logged in separately.
-"""
-
-Features added:
+Features:
 - Auto play next song when current ends
 - Auto leave VC when queue is empty
 - Notify in group when someone joins VC (full user info)
@@ -35,19 +21,13 @@ from pytgcalls.types import (
 
 from core.clients import app, assistant
 
-# id(client) -> PyTgCalls instance
 _INSTANCES: dict[int, PyTgCalls] = {}
-# id(client) -> bool, whether .start() has been called
 _STARTED: dict[int, bool] = {}
-
-# id(client) -> {chat_id: [queued track dicts]}
 _QUEUES: dict[int, dict[int, list[dict]]] = {}
-# id(client) -> {chat_id: currently playing track dict}
 _CURRENT: dict[int, dict[int, dict]] = {}
 
 
 def _resolve_call_client(client):
-    """Only the main `app` delegates to `assistant` (if configured)."""
     if client is app and assistant is not None:
         return assistant
     return client
@@ -64,11 +44,9 @@ def get_pytgcalls(client) -> PyTgCalls:
 
 
 async def _send_vc_user_info(client, update: UpdatedGroupCallParticipant, is_join: bool):
-    """Send full user info when someone joins or leaves the VC."""
     chat_id = update.chat_id
     user_id = update.participant.user_id
 
-    # Ignore self (bot / assistant)
     try:
         me = await client.get_me()
         if user_id == me.id:
@@ -116,9 +94,7 @@ async def _send_vc_user_info(client, update: UpdatedGroupCallParticipant, is_joi
 
 
 def _register_handlers(pytg: PyTgCalls, client):
-    """Register stream_end + join/leave handlers."""
 
-    # Auto next song / Auto leave
     @pytg.on_update(fl.stream_end())
     async def _on_stream_end(_: PyTgCalls, update: StreamEnded):
         chat_id = update.chat_id
@@ -162,19 +138,16 @@ def _register_handlers(pytg: PyTgCalls, client):
             except Exception:
                 pass
 
-    # User JOINS VC
     @pytg.on_update(fl.call_participant(GroupCallParticipant.Action.JOINED))
     async def _on_join(_: PyTgCalls, update: UpdatedGroupCallParticipant):
         await _send_vc_user_info(client, update, is_join=True)
 
-    # User LEAVES VC
     @pytg.on_update(fl.call_participant(GroupCallParticipant.Action.LEFT))
     async def _on_leave(_: PyTgCalls, update: UpdatedGroupCallParticipant):
         await _send_vc_user_info(client, update, is_join=False)
 
 
 async def ensure_started(client):
-    """Starts this client's PyTgCalls instance once, lazily on first use."""
     call_client = _resolve_call_client(client)
     key = id(call_client)
     if not _STARTED.get(key):
@@ -193,7 +166,6 @@ def get_current(client) -> dict:
 
 
 async def play_track(client, chat_id: int, stream_url: str, video: bool = False):
-    """Join / change stream in a chat's VC."""
     await ensure_started(client)
     pytgcalls = get_pytgcalls(client)
 
