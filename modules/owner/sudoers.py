@@ -29,16 +29,16 @@ def sudo_only(func):
     return wrapper
 
 
-def owner_only(func):
+def sudo_only(func):
+    """Decorator: only owner or sudo users can trigger this handler.
+    Unauthorized users are silently ignored (no reply)."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         user_id = message.from_user.id if message.from_user else None
-        if user_id != OWNER_ID:
-            msg = await message.reply_text("🚫 Owner-only command.")
-            return
+        if user_id not in SUDO_USERS:
+            return          # ← bas return, koi reply nahi
         return await func(client, message, *args, **kwargs)
     return wrapper
-
 
 @app.on_message(filters.command("addsudo", prefixes=[".", "!"]))
 @owner_only
