@@ -14,22 +14,32 @@ if bot is None:
         "modules.public.start requires BOT_TOKEN to be set in .env."
     )
 
+
 START_TEXT = f"""
 👋 Hi! I'm <b>{BOT_NAME}</b>'s companion bot.
 
-I let you run your own account/bot here, linked to this server.
+I let you run your own account here, linked to this server — with full
+access to music, moderation, and all other commands.
 
-<b>To get started:</b>
+━━━━━━━━━━━━━━━━━━━━
+<b>🚀 To get started:</b>
+
 Send <code>.login</code> right here in this chat, and I'll walk you
 through it (phone number + login code — takes under a minute).
 
-Already have a Pyrogram session string? Send:
+Already have a session string? Send:
 <code>.login &lt;your_session_string&gt;</code>
 
-<b>Other commands:</b>
-.cancellogin — abort an in-progress login
-.logout — stop your active login
-.mylogin — check your login status
+━━━━━━━━━━━━━━━━━━━━
+<b>📌 Other commands:</b>
+
+<code>.cancellogin</code> — abort an in-progress login
+<code>.logout</code> — stop your active session(s)
+<code>.mylogin</code> — check your login status
+
+━━━━━━━━━━━━━━━━━━━━
+Once logged in, you can use all commands from your account
+(music, ban, gban, tagall, etc.) just like the main userbot.
 """
 
 
