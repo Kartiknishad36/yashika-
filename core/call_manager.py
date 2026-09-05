@@ -4,9 +4,11 @@ Per-client PyTgCalls management — every account has its OWN VC engine.
 Features:
 - Auto play next song when current ends
 - Auto leave VC when queue is empty
-- Notify in group when someone joins VC (full user info)
-- Notify in group when someone leaves VC (full user info)
+- Notify in group when someone joins/leaves VC (full user info)
+- Those join/leave messages auto-delete after 5 seconds
 """
+
+import asyncio
 
 from pytgcalls import PyTgCalls
 from pytgcalls import filters as fl
@@ -26,6 +28,8 @@ _STARTED: dict[int, bool] = {}
 _QUEUES: dict[int, dict[int, list[dict]]] = {}
 _CURRENT: dict[int, dict[int, dict]] = {}
 
+VC_NOTICE_DELETE_AFTER = 5  # seconds
+
 
 def _resolve_call_client(client):
     if client is app and assistant is not None:
@@ -41,6 +45,14 @@ def get_pytgcalls(client) -> PyTgCalls:
         _INSTANCES[key] = pytg
         _register_handlers(pytg, client)
     return _INSTANCES[key]
+
+
+async def _auto_delete(msg, delay: int = VC_NOTICE_DELETE_AFTER):
+    try:
+        await asyncio.sleep(delay)
+        await msg.delete()
+    except Exception:
+        pass
 
 
 async def _send_vc_user_info(client, update: UpdatedGroupCallParticipant, is_join: bool):
@@ -61,18 +73,19 @@ async def _send_vc_user_info(client, update: UpdatedGroupCallParticipant, is_joi
         user = await client.get_users(user_id)
     except Exception:
         try:
-            await client.send_message(
+            msg = await client.send_message(
                 chat_id,
                 f"{emoji} <b>{event_text}</b>\n\n"
                 f"👤 User ID: <code>{user_id}</code>",
             )
+            asyncio.create_task(_auto_delete(msg))
         except Exception:
             pass
         return
 
     full_name = (user.first_name or "") + (f" {user.last_name}" if user.last_name else "")
     username = f"@{user.username}" if user.username else "None"
-    mention = getattr(user, "mention", full_name)
+    mention = getattr(user, "mention", full_name or str(user.id))
     is_premium = getattr(user, "is_premium", False)
     is_bot = user.is_bot
     dc_id = getattr(user, "dc_id", "N/A")
@@ -88,7 +101,8 @@ async def _send_vc_user_info(client, update: UpdatedGroupCallParticipant, is_joi
     )
 
     try:
-        await client.send_message(chat_id, text)
+        msg = await client.send_message(chat_id, text)
+        asyncio.create_task(_auto_delete(msg))
     except Exception:
         pass
 
@@ -198,7 +212,10 @@ async def pause_stream(client, chat_id: int):
     await get_pytgcalls(client).pause(chat_id)
 
 
-async def resume_stream(client, chat_id: int):
+async def resume_stream(client, message_or_chat, chat_id: int = None):
+    # keep signature compatible: resume_stream(client, chat_id)
+    if chat_id is None:
+        chat_id = message_or_chat
     await get_pytgcalls(client).resume(chat_id)
 
 
