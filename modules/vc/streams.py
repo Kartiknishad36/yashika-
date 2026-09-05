@@ -1,86 +1,181 @@
 """
-Fetches playable audio/video files via the ArtistBots API, given a YouTube
-search query. Unlike BabyAPI (which returns a JSON stream URL), ArtistBots
-directly returns the binary file content on GET, so we download it straight
-to a local file and hand PyTgCalls that local path instead of a remote URL.
+YouTube audio/video via yt-dlp + cookies.txt (no external music API).
 
-Search -> video id (youtubesearchpython) -> download binary -> local file path.
+Flow:
+  query → YouTube search (or direct link) → yt-dlp download with cookies → local file
+
+Put cookies.txt in project root, or set COOKIES_PATH in .env.
+ffmpeg must be installed on the server for audio extract.
 """
 import os
 import asyncio
-import aiohttp
+import hashlib
+from yt_dlp import YoutubeDL
 from youtubesearchpython.__future__ import VideosSearch
 
-from config import BASE_URL, API_KEY
+try:
+    from config import COOKIES_PATH
+except ImportError:
+    COOKIES_PATH = os.environ.get("COOKIES_PATH", "cookies.txt")
 
 DOWNLOAD_DIR = "downloads"
-DOWNLOAD_TIMEOUT = 120  # seconds
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+
+def _cookies_file() -> str | None:
+    path = COOKIES_PATH or "cookies.txt"
+    if path and os.path.isfile(path):
+        return path
+    # also try project root relative
+    alt = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    if os.path.isfile(alt):
+        return alt
+    return None
 
 
 async def _search_video_id(query: str) -> tuple[str, str, str]:
-    """Returns (video_id, title, thumbnail) for the top YouTube search result."""
+    """Returns (video_id, title, thumbnail)."""
     search = VideosSearch(query, limit=1)
     result = await search.next()
-    if not result["result"]:
+    if not result.get("result"):
         raise ValueError(f"No results found for query: {query}")
     item = result["result"][0]
     vidid = item["id"]
     title = item.get("title", query)
-    thumb = ""
     thumbs = item.get("thumbnails") or []
-    if thumbs:
-        thumb = thumbs[-1]["url"]
+    thumb = thumbs[-1]["url"] if thumbs else ""
     return vidid, title, thumb
 
 
-async def _download_via_artistbots(vidid: str, want_video: bool) -> str:
-    """
-    GET {BASE_URL}/download?url=<video_id>&type=audio|video&api_key=<key>
-    Streams the binary response straight to a local file, returns the path.
-    """
-    if not API_KEY:
-        raise RuntimeError("[ArtistBots] No API_KEY configured in .env")
+def _ydl_opts(want_video: bool, outtmpl: str) -> dict:
+    opts = {
+        "outtmpl": outtmpl,
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "nocheckcertificate": True,
+    }
+    cookies = _cookies_file()
+    if cookies:
+        opts["cookiefile"] = cookies
 
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    file_ext = ".mp4" if want_video else ".mp3"
-    file_path = os.path.join(DOWNLOAD_DIR, f"{vidid}{file_ext}")
+    if want_video:
+        opts["format"] = "best[height<=480]/bestaudio/best"
+    else:
+        opts["format"] = "bestaudio[ext=m4a]/bestaudio/best"
+        opts["postprocessors"] = [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ]
+    return opts
 
-    if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-        return file_path
 
-    endpoint = f"{BASE_URL.rstrip('/')}/download"
-    params = {"url": vidid, "type": "video" if want_video else "audio", "api_key": API_KEY}
+def _find_output(prefix: str) -> str | None:
+    if not os.path.isdir(DOWNLOAD_DIR):
+        return None
+    for name in os.listdir(DOWNLOAD_DIR):
+        if name.startswith(prefix) and os.path.getsize(os.path.join(DOWNLOAD_DIR, name)) > 0:
+            return os.path.join(DOWNLOAD_DIR, name)
+    return None
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            endpoint, params=params, timeout=aiohttp.ClientTimeout(total=DOWNLOAD_TIMEOUT)
-        ) as resp:
-            if resp.status != 200:
-                body = (await resp.text())[:300]
-                raise RuntimeError(f"[ArtistBots] HTTP {resp.status}: {body}")
 
-            with open(file_path, "wb") as f:
-                async for chunk in resp.content.iter_chunked(65536):
-                    f.write(chunk)
+async def _download_id(vidid: str, want_video: bool) -> str:
+    ext_hint = "mp4" if want_video else "mp3"
+    cached = os.path.join(DOWNLOAD_DIR, f"{vidid}.{ext_hint}")
+    if os.path.exists(cached) and os.path.getsize(cached) > 0:
+        return cached
 
-    if not os.path.exists(file_path) or os.path.getsize(file_path) == 0:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        raise RuntimeError("[ArtistBots] Download completed but file is empty")
+    found = _find_output(vidid)
+    if found:
+        return found
 
-    return file_path
+    url = f"https://www.youtube.com/watch?v={vidid}"
+    outtmpl = os.path.join(DOWNLOAD_DIR, f"{vidid}.%(ext)s")
+    opts = _ydl_opts(want_video, outtmpl)
+
+    def _run():
+        with YoutubeDL(opts) as ydl:
+            ydl.download([url])
+
+    await asyncio.to_thread(_run)
+
+    if os.path.exists(cached) and os.path.getsize(cached) > 0:
+        return cached
+    found = _find_output(vidid)
+    if found:
+        return found
+    raise RuntimeError(
+        "Download failed. Check cookies.txt is valid and ffmpeg is installed."
+    )
+
+
+async def _download_url(url: str, want_video: bool) -> tuple[str, str]:
+    """Returns (title, file_path)."""
+    key = hashlib.md5(url.encode()).hexdigest()[:12]
+    ext_hint = "mp4" if want_video else "mp3"
+    cached = os.path.join(DOWNLOAD_DIR, f"{key}.{ext_hint}")
+    if os.path.exists(cached) and os.path.getsize(cached) > 0:
+        return url, cached
+
+    found = _find_output(key)
+    if found:
+        return url, found
+
+    outtmpl = os.path.join(DOWNLOAD_DIR, f"{key}.%(ext)s")
+    opts = _ydl_opts(want_video, outtmpl)
+    title = url
+
+    def _run():
+        nonlocal title
+        with YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            if info:
+                title = info.get("title") or url
+
+    await asyncio.to_thread(_run)
+
+    if os.path.exists(cached) and os.path.getsize(cached) > 0:
+        return title, cached
+    found = _find_output(key)
+    if found:
+        return title, found
+    raise RuntimeError("URL download failed. Check cookies.txt / ffmpeg.")
+
+
+def _is_youtube_url(q: str) -> bool:
+    q = q.lower()
+    return "youtube.com" in q or "youtu.be" in q
 
 
 async def get_result(query: str, video: bool = False) -> dict:
     """
-    Main entry point. Returns dict: {title, stream_url, thumbnail, video}
-    `stream_url` here is actually a local file path — MediaStream() accepts
-    both local paths and remote URLs, so no other code needs to change.
-    Raises ValueError/RuntimeError on failure (caller should catch and reply to user).
+    Main entry. Returns:
+      {title, stream_url, thumbnail, video}
+    stream_url = local file path (MediaStream accepts local paths).
     """
+    query = (query or "").strip()
+    if not query:
+        raise ValueError("Empty query")
+
+    if _is_youtube_url(query):
+        title, path = await _download_url(query, video)
+        print(f"[yt-dlp] Ready: {title} -> {path}")
+        return {
+            "title": title,
+            "stream_url": path,
+            "thumbnail": "",
+            "video": video,
+        }
+
     vidid, title, thumb = await _search_video_id(query)
-
-    file_path = await _download_via_artistbots(vidid, video)
-
-    print(f"[ArtistBots] Ready: {title} -> {file_path}")
-    return {"title": title, "stream_url": file_path, "thumbnail": thumb, "video": video}
+    path = await _download_id(vidid, video)
+    print(f"[yt-dlp] Ready: {title} -> {path}")
+    return {
+        "title": title,
+        "stream_url": path,
+        "thumbnail": thumb,
+        "video": video,
+    }
