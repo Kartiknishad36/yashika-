@@ -231,9 +231,9 @@ async def brolist_cmd(client, message: Message):
 @app.on_message(
     filters.incoming
     & filters.text
-    & \~filters.bot
-    & \~filters.via_bot
-    & \~filters.service,
+    & ~filters.bot
+    & ~filters.via_bot
+    & ~filters.service,
     group=50,
 )
 async def bro_auto_reply(client, message: Message):
