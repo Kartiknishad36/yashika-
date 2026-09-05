@@ -11,12 +11,20 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 STRING_SESSION = os.environ.get("STRING_SESSION", "")
 ASSISTANT_SESSION = os.environ.get("ASSISTANT_SESSION", "")
 
-# ===================== Owner / Sudo =====================
+# ===================== Owner =====================
 OWNER_ID = int(os.environ.get("OWNER_ID", 0))
-LOG_GROUP_ID = int(os.environ.get("LOG_GROUP_ID", 0)) if os.environ.get("LOG_GROUP_ID") else None
+LOG_GROUP_ID = (
+    int(os.environ.get("LOG_GROUP_ID", 0))
+    if os.environ.get("LOG_GROUP_ID")
+    else None
+)
 
-# ===================== BabyAPI (song/video fetch source) =====================
-BASE_URL = os.environ.get("BASE_URL", "https://api.babiesiq.tech")
+# ===================== Music (yt-dlp + cookies) =====================
+# Netscape cookies file for YouTube (project root by default)
+COOKIES_PATH = os.environ.get("COOKIES_PATH", "cookies.txt")
+
+# Optional legacy API keys (unused if streams.py is cookies-based)
+BASE_URL = os.environ.get("BASE_URL", "")
 API_KEY = os.environ.get("API_KEY", "")
 
 # ===================== Misc =====================
