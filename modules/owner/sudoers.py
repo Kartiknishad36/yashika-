@@ -1,14 +1,15 @@
 """
 Auth decorators.
 
-sudo_only  → sirf TAB jab command USI account se aaye jo client chal raha hai
-             (filters.me jaisa). Group/DM mein kisi aur ke command = silent ignore.
+sudo_only:
+  - client ka khud ka account (me.id)  → commands chale
+  - ya config OWNER_ID                 → owner hamesha control kar sake
+  - baaki users                        → silent ignore (no reply)
 
-owner_only → sirf config OWNER_ID (bot owner / server owner).
-             addsudo / delsudo jaise management commands ke liye.
+owner_only:
+  - sirf OWNER_ID (addsudo / delsudo etc.)
 
-Note: multi-login sessions mein har client apna me.id check karta hai,
-isliye koi ek session dusre session ke commands nahi chala sakta.
+Multi-login: har clone client apna me.id check karta hai.
 """
 import functools
 from pyrogram import filters
@@ -18,8 +19,6 @@ from core.clients import app
 from config import OWNER_ID
 from database.mongo import add_sudo, remove_sudo, get_sudoers
 
-# Optional list — sirf bot-side management / future use.
-# Userbot commands ab SUDO_USERS pe depend nahi karti.
 SUDO_USERS: set[int] = {OWNER_ID}
 
 
@@ -32,20 +31,22 @@ async def load_sudoers():
 
 def sudo_only(func):
     """
-    Sirf apna account:
-      message.from_user.id == client.get_me().id
-    Warna silent return — koi reply nahi.
+    Allow:
+      1) message.from_user.id == client.get_me().id
+      2) message.from_user.id == OWNER_ID
+    Else silent return.
     """
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user:
             return
+        uid = message.from_user.id
         try:
             me = await client.get_me()
         except Exception:
             return
-        if message.from_user.id != me.id:
-            return  # dusra user — ignore
+        if uid != me.id and uid != OWNER_ID:
+            return
         return await func(client, message, *args, **kwargs)
     return wrapper
 
@@ -63,8 +64,6 @@ def owner_only(func):
 @app.on_message(filters.command("addsudo", prefixes=[".", "!"]))
 @owner_only
 async def addsudo_cmd(client, message: Message):
-    # Ab userbot commands ke liye zaroori nahi, lekin login-bot access
-    # list rakhni ho toh rakho.
     if not message.reply_to_message and len(message.command) < 2:
         await message.reply_text("Reply to a user or give ID: `.addsudo <id>`")
         return
@@ -75,10 +74,7 @@ async def addsudo_cmd(client, message: Message):
     )
     await add_sudo(target)
     SUDO_USERS.add(target)
-    await message.reply_text(
-        f"✅ Added `{target}` to sudo list.\n"
-        f"Note: userbot commands ab sirf har account khud se chalte hain."
-    )
+    await message.reply_text(f"✅ Added `{target}` to sudo list.")
 
 
 @app.on_message(filters.command("delsudo", prefixes=[".", "!"]))
@@ -101,8 +97,8 @@ async def delsudo_cmd(client, message: Message):
 @owner_only
 async def sudolist_cmd(client, message: Message):
     text = (
-        "👑 <b>Sudo list</b> (login/management helpers)\n\n"
+        "👑 <b>Sudo list</b>\n\n"
         + "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS))
-        + "\n\nUserbot cmds = sirf apna account (`me.id`)."
+        + "\n\nCommands: account (`me.id`) ya OWNER_ID."
     )
     await message.reply_text(text)
