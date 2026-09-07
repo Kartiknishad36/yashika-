@@ -30,6 +30,7 @@ MODULES = [
     "modules.utils.info",
     "modules.utils.fun",
     "modules.bot.start",
+    "modules.economy.basic",
 ]
 for m in MODULES:
     try:
