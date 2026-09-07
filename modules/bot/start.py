@@ -1,5 +1,5 @@
 """
-Premium /start for BOT account — Baka-style UI.
+Premium /start for BOT YASHIKA 
 Userbot handlers stay on `app`; this runs only on `bot`.
 """
 from pyrogram import filters
@@ -31,12 +31,12 @@ def get_stats(uid: int) -> dict:
     if uid not in _STATS:
         _STATS[uid] = {"balance": 300, "rank": 14522, "gems": 0.0, "kills": 0}
     st = _STATS[uid]
-    st["rank"] = max(1, 20000 - int(st["balance"]) // 10)
+    st["rank"] = max(1, 200000 - int(st["balance"]) // 1000000000)
     return st
 
 
 def start_keyboard() -> InlineKeyboardMarkup:
-    uname = (BOT_USERNAME or "YashikaBot").lstrip("@")
+    uname = (BOT_USERNAME or "Music_yaa_bot").lstrip("@")
     add_url = f"https://t.me/{uname}?startgroup=true"
 
     owner_btn = None
@@ -112,10 +112,10 @@ async def ui_callbacks(client, query: CallbackQuery):
         await query.message.reply_text(
             f"<b>✨ {BOT_NAME} FEATURES</b>\n\n"
             f"🎵 Music / VC (userbot: .play .vplay)\n"
-            f"🎮 Games — dice, couple, TD, bomb\n"
+            f"🎮 Games — /dice, /couple, /TD, /bomb\n"
             f"💰 Economy — /bal /daily /rob /kill\n"
             f"💕 Fun — /kiss /hug /slap /couple\n"
-            f"🛡 Group tools — welcome, mod\n\n"
+            f"🛡 Group tools — /welcome, mod\n\n"
             f"Group mein add karke try karo."
         )
     elif data == "ui_games":
