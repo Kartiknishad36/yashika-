@@ -1,5 +1,6 @@
 from pyrogram import filters
 from pyrogram.types import Message
+from database.mongo import set_vcinfo_enabled, get_vcinfo_enabled
 
 from core.clients import app
 from core.call_manager import (
@@ -71,3 +72,36 @@ async def skip_cmd(client, message: Message):
         await message.reply_text(f"⏭ Now playing: <b>{next_track['title']}</b>")
     except Exception as e:
         await message.reply_text(f"❌ Failed to skip: `{e}`")
+@app.on_message(cmd("vcinfo"))
+@sudo_only
+async def vcinfo_cmd(client, message: Message):
+    """
+    .vcinfo on  — is group mein VC join/leave info ON
+    .vcinfo off — OFF
+    .vcinfo     — current status
+    """
+    chat_id = message.chat.id
+    args = message.command[1:] if len(message.command) > 1 else []
+
+    if not args:
+        on = await get_vcinfo_enabled(chat_id)
+        status = "**ON** ✅" if on else "**OFF** ❌"
+        await message.reply_text(
+            f"🎤 VC Info is group mein: {status}\n\n"
+            f"• `.vcinfo on` — chalu karo\n"
+            f"• `.vcinfo off` — band karo"
+        )
+        return
+
+    action = args[0].lower()
+    if action in ("on", "enable", "1", "true"):
+        await set_vcinfo_enabled(chat_id, True)
+        await message.reply_text(
+            "✅ VC Info **ON** is group ke liye.\n"
+            "Ab jab koi VC join/leave karega, message aayega (5s baad delete)."
+        )
+    elif action in ("off", "disable", "0", "false"):
+        await set_vcinfo_enabled(chat_id, False)
+        await message.reply_text("❌ VC Info **OFF** is group ke liye.")
+    else:
+        await message.reply_text("Usage: `.vcinfo on` | `.vcinfo off` | `.vcinfo`")
