@@ -31,3 +31,8 @@ API_KEY = os.environ.get("API_KEY", "")
 BOT_NAME = os.environ.get("BOT_NAME", "MyUB")
 BOT_USERNAME = os.environ.get("BOT_USERNAME", "")
 PREFIXES = list(os.environ.get("PREFIXES", ".!"))
+
+# ===================== Bot public links (Baka-style UI) =====================
+SUPPORT_CHAT = os.environ.get("SUPPORT_CHAT", "https://t.me/YourSupport")
+UPDATE_CHANNEL = os.environ.get("UPDATE_CHANNEL", "https://t.me/YourUpdates")
+OWNER_USERNAME = os.environ.get("OWNER_USERNAME", "")  # without @
