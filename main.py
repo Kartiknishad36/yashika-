@@ -36,6 +36,8 @@ MODULES = [
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.fun",
+    "modules.bot.ai_chat",
+    "modules.bot.stickers",
 ]
 
 for m in MODULES:
