@@ -216,3 +216,80 @@ async def get_bro_targets() -> list[int]:
 async def is_bro_target(user_id: int) -> bool:
     async with _lock:
         return user_id in _read().get("bro_targets", [])
+
+# ===================== VC join/leave info (per chat) =====================
+async def set_vcinfo_enabled(chat_id: int, enabled: bool):
+    async with _lock:
+        data = _read()
+        data.setdefault("vcinfo", {})
+        data["vcinfo"][str(chat_id)] = bool(enabled)
+        _write(data)
+
+
+async def get_vcinfo_enabled(chat_id: int) -> bool:
+    """Default OFF."""
+    async with _lock:
+        return bool(_read().get("vcinfo", {}).get(str(chat_id), False))
+        # ===================== Economy =====================
+_DEFAULT_BALANCE = 300
+_DAILY_REWARD = 200
+_DAILY_COOLDOWN = 24 * 60 * 60  # seconds
+
+
+def _eco_user(data: dict, user_id: int) -> dict:
+    data.setdefault("economy", {})
+    key = str(user_id)
+    if key not in data["economy"]:
+        data["economy"][key] = {
+            "balance": _DEFAULT_BALANCE,
+            "gems": 0.0,
+            "kills": 0,
+            "protect_until": 0,
+            "last_daily": 0,
+        }
+    return data["economy"][key]
+
+
+async def eco_get(user_id: int) -> dict:
+    async with _lock:
+        data = _read()
+        u = dict(_eco_user(data, user_id))
+        return u
+
+
+async def eco_set(user_id: int, **fields):
+    async with _lock:
+        data = _read()
+        u = _eco_user(data, user_id)
+        u.update(fields)
+        _write(data)
+
+
+async def eco_add_balance(user_id: int, amount: int) -> int:
+    async with _lock:
+        data = _read()
+        u = _eco_user(data, user_id)
+        u["balance"] = int(u.get("balance", 0)) + int(amount)
+        if u["balance"] < 0:
+            u["balance"] = 0
+        _write(data)
+        return u["balance"]
+
+
+async def eco_try_daily(user_id: int) -> tuple[bool, int, int]:
+    """
+    Returns (ok, reward_or_seconds_left, new_balance).
+    """
+    import time
+    async with _lock:
+        data = _read()
+        u = _eco_user(data, user_id)
+        now = int(time.time())
+        last = int(u.get("last_daily", 0))
+        left = _DAILY_COOLDOWN - (now - last)
+        if left > 0:
+            return False, left, int(u["balance"])
+        u["last_daily"] = now
+        u["balance"] = int(u.get("balance", 0)) + _DAILY_REWARD
+        _write(data)
+        return True, _DAILY_REWARD, int(u["balance"])
