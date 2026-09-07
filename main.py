@@ -25,13 +25,19 @@ MODULES = [
     "modules.global_mod.welcome",
     "modules.owner.clone",
     "modules.public.login",
-    "modules.public.start",
+    #"modules.public.start",
+    "modules.bot.start",
+    "modules.economy.basic",
+    "modules.games.couple",
+    "modules.games.dice",
+    "modules.games.truth_dare",
+    "modules.games.bomb",
+    "modules.fun_family.actions",
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.fun",
-    "modules.bot.start",
-    "modules.economy.basic",
 ]
+
 for m in MODULES:
     try:
         importlib.import_module(m)
