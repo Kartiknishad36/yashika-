@@ -1,6 +1,5 @@
 """
-Premium /start for BOT YASHIKA 
-Userbot handlers stay on `app`; this runs only on `bot`.
+Premium /start for BOT — group + DM, /start and .start
 """
 from pyrogram import filters
 from pyrogram.types import (
@@ -23,15 +22,32 @@ from config import (
 if bot is None:
     raise RuntimeError("modules.bot.start requires BOT_TOKEN in .env")
 
-# In-memory stats (File 4 economy DB se replace hoga)
+# Fallback stats; economy DB available ho toh use
+try:
+    from database.mongo import eco_get
+except Exception:
+    eco_get = None
+
 _STATS: dict[int, dict] = {}
 
 
-def get_stats(uid: int) -> dict:
+async def get_stats(uid: int) -> dict:
+    if eco_get is not None:
+        try:
+            st = await eco_get(uid)
+            bal = int(st.get("balance", 300))
+            return {
+                "balance": bal,
+                "rank": max(1, 20000 - bal // 10),
+                "gems": float(st.get("gems", 0)),
+                "kills": int(st.get("kills", 0)),
+            }
+        except Exception:
+            pass
     if uid not in _STATS:
         _STATS[uid] = {"balance": 300, "rank": 14522, "gems": 0.0, "kills": 0}
     st = _STATS[uid]
-    st["rank"] = max(1, 200000 - int(st["balance"]) // 1000000000)
+    st["rank"] = max(1, 20000 - int(st["balance"]) // 10)
     return st
 
 
@@ -90,12 +106,13 @@ def start_caption(name: str, st: dict) -> str:
     )
 
 
-@bot.on_message(filters.command("start") & filters.private)
+@bot.on_message(filters.command(["start"], prefixes=["/", ".", "!"]))
 async def bot_start(client, message: Message):
+    """Group + DM — /start .start !start"""
     user = message.from_user
     if not user:
         return
-    st = get_stats(user.id)
+    st = await get_stats(user.id)
     await message.reply_text(
         start_caption(user.first_name or "USER", st),
         reply_markup=start_keyboard(),
@@ -106,26 +123,31 @@ async def bot_start(client, message: Message):
 @bot.on_callback_query(filters.regex(r"^ui_"))
 async def ui_callbacks(client, query: CallbackQuery):
     data = query.data
+
+    if data == "ui_promoter":
+        await query.answer("Contact owner for promoter access.", show_alert=True)
+        return
+
     await query.answer()
 
     if data == "ui_features":
         await query.message.reply_text(
             f"<b>✨ {BOT_NAME} FEATURES</b>\n\n"
             f"🎵 Music / VC (userbot: .play .vplay)\n"
-            f"🎮 Games — /dice, /couple, /TD, /bomb\n"
+            f"🎮 Games — /dice /couple /td /bomb /ludo\n"
             f"💰 Economy — /bal /daily /rob /kill\n"
-            f"💕 Fun — /kiss /hug /slap /couple\n"
-            f"🛡 Group tools — /welcome, mod\n\n"
+            f"💕 Fun — /kiss /hug /slap\n"
+            f"🤖 AI — /ai /chatbot on\n"
+            f"🛡 Group tools — welcome, mod\n\n"
             f"Group mein add karke try karo."
         )
     elif data == "ui_games":
         await query.message.reply_text(
             "<b>🎮 GAMES</b>\n\n"
-            "/dice /dart /basket — Telegram games\n"
+            "/dice /dart /basket /slot\n"
             "/couple — today's cute couple\n"
-            "/td — truth & dare\n"
-            "/bomb — bomb game (soon)\n"
-            "/chain — word chain (soon)"
+            "/td /truth /dare\n"
+            "/bomb /bombstart\n"
+            "/ludo join | start | roll\n"
+            "/chase /chasestart /catch"
         )
-    elif data == "ui_promoter":
-        await query.answer("Contact owner for promoter access.", show_alert=True)
