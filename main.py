@@ -39,6 +39,7 @@ MODULES = [
     "modules.bot.stickers",
     "modules.games.chase",
     "modules.games.ludo",
+    "modules.bot.music",
 ]
 
 for m in MODULES:
