@@ -24,8 +24,7 @@ MODULES = [
     "modules.global_mod.bro",
     "modules.global_mod.welcome",
     "modules.owner.clone",
-    "modules.public.login",
-    #"modules.public.start",
+    "modules.public.login", 
     "modules.bot.start",
     "modules.economy.basic",
     "modules.games.couple",
@@ -38,6 +37,8 @@ MODULES = [
     "modules.utils.fun",
     "modules.bot.ai_chat",
     "modules.bot.stickers",
+    "modules.games.chase",
+    "modules.games.ludo",
 ]
 
 for m in MODULES:
