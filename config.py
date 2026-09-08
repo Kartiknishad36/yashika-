@@ -27,7 +27,7 @@ API_KEY = os.environ.get("API_KEY", "")
 
 # ===================== AI (Gemini chatbot) =====================
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 # ===================== Bot identity / UI =====================
 BOT_NAME = os.environ.get("BOT_NAME", "Yashika")
