@@ -2,20 +2,23 @@
 Auth decorators.
 
 sudo_only:
-  - client ka khud ka account (me.id)  → commands chale
-  - ya config OWNER_ID                 → owner hamesha control kar sake
-  - baaki users                        → silent ignore (no reply)
+  - client me.id  (apna userbot account)
+  - OWNER_ID
+  - SUDO_USERS list
+  → silent ignore baaki
+
+owner_or_sudo:
+  - OWNER_ID ya sudo list
+  → broadcast / admin-style bot cmds
 
 owner_only:
-  - sirf OWNER_ID (addsudo / delsudo etc.)
-
-Multi-login: har clone client apna me.id check karta hai.
+  - sirf OWNER_ID (addsudo / delsudo)
 """
 import functools
 from pyrogram import filters
 from pyrogram.types import Message
 
-from core.clients import app
+from core.clients import app, bot
 from config import OWNER_ID
 from database.mongo import add_sudo, remove_sudo, get_sudoers
 
@@ -30,29 +33,40 @@ async def load_sudoers():
 
 
 def sudo_only(func):
-    """
-    Allow:
-      1) message.from_user.id == client.get_me().id
-      2) message.from_user.id == OWNER_ID
-    Else silent return.
-    """
+    """me.id | OWNER_ID | sudo list — userbot cmds (.play etc.)."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user:
             return
         uid = message.from_user.id
+        if uid == OWNER_ID or uid in SUDO_USERS:
+            return await func(client, message, *args, **kwargs)
         try:
             me = await client.get_me()
+            if uid == me.id:
+                return await func(client, message, *args, **kwargs)
         except Exception:
             return
-        if uid != me.id and uid != OWNER_ID:
+        return  # silent
+    return wrapper
+
+
+def owner_or_sudo(func):
+    """OWNER_ID ya sudo — broadcast etc. (group/DM)."""
+    @functools.wraps(func)
+    async def wrapper(client, message: Message, *args, **kwargs):
+        if not message.from_user:
+            return
+        uid = message.from_user.id
+        if uid != OWNER_ID and uid not in SUDO_USERS:
+            await message.reply_text("❌ Sirf OWNER / sudo.")
             return
         return await func(client, message, *args, **kwargs)
     return wrapper
 
 
 def owner_only(func):
-    """Sirf .env wala OWNER_ID."""
+    """Sirf .env OWNER_ID."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user or message.from_user.id != OWNER_ID:
@@ -61,44 +75,55 @@ def owner_only(func):
     return wrapper
 
 
-@app.on_message(filters.command("addsudo", prefixes=[".", "!"]))
+# ---------- sudo management (OWNER only) ----------
+@app.on_message(filters.command(["addsudo"], prefixes=["/", ".", "!"]))
 @owner_only
 async def addsudo_cmd(client, message: Message):
     if not message.reply_to_message and len(message.command) < 2:
-        await message.reply_text("Reply to a user or give ID: `.addsudo <id>`")
+        await message.reply_text("Reply to user or: `.addsudo <id>`")
         return
-    target = (
-        message.reply_to_message.from_user.id
-        if message.reply_to_message
-        else int(message.command[1])
-    )
+    try:
+        target = (
+            message.reply_to_message.from_user.id
+            if message.reply_to_message and message.reply_to_message.from_user
+            else int(message.command[1])
+        )
+    except (ValueError, IndexError, AttributeError):
+        await message.reply_text("Invalid ID.")
+        return
     await add_sudo(target)
     SUDO_USERS.add(target)
-    await message.reply_text(f"✅ Added `{target}` to sudo list.")
+    await message.reply_text(f"✅ Added `{target}` to sudo.")
 
 
-@app.on_message(filters.command("delsudo", prefixes=[".", "!"]))
+@app.on_message(filters.command(["delsudo"], prefixes=["/", ".", "!"]))
 @owner_only
 async def delsudo_cmd(client, message: Message):
     if not message.reply_to_message and len(message.command) < 2:
-        await message.reply_text("Reply to a user or give ID: `.delsudo <id>`")
+        await message.reply_text("Reply to user or: `.delsudo <id>`")
         return
-    target = (
-        message.reply_to_message.from_user.id
-        if message.reply_to_message
-        else int(message.command[1])
-    )
+    try:
+        target = (
+            message.reply_to_message.from_user.id
+            if message.reply_to_message and message.reply_to_message.from_user
+            else int(message.command[1])
+        )
+    except (ValueError, IndexError, AttributeError):
+        await message.reply_text("Invalid ID.")
+        return
+    if target == OWNER_ID:
+        await message.reply_text("OWNER ko sudo se hata nahi sakte.")
+        return
     await remove_sudo(target)
     SUDO_USERS.discard(target)
-    await message.reply_text(f"✅ Removed `{target}` from sudo list.")
+    await message.reply_text(f"✅ Removed `{target}` from sudo.")
 
 
-@app.on_message(filters.command("sudolist", prefixes=[".", "!"]))
+@app.on_message(filters.command(["sudolist"], prefixes=["/", ".", "!"]))
 @owner_only
 async def sudolist_cmd(client, message: Message):
-    text = (
-        "👑 <b>Sudo list</b>\n\n"
-        + "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS))
-        + "\n\nCommands: account (`me.id`) ya OWNER_ID."
+    lines = "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS))
+    await message.reply_text(
+        f"👑 <b>Sudo list</b>\n\n{lines}\n\n"
+        f"<b>OWNER:</b> <code>{OWNER_ID}</code>"
     )
-    await message.reply_text(text)
