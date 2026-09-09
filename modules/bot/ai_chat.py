@@ -83,7 +83,7 @@ async def chatbot_toggle(client, message: Message):
     arg = message.command[1].lower()
     if arg in ("on", "enable", "1"):
         await set_chatbot(message.chat.id, True)
-        await message.reply_text("✅ Group chatbot **ON** — members ke messages pe AI reply karega.")
+        await message.reply_text("✅ Group chatbot **ON** BABY AAO HUM ROMANTICBATE KARTE HE .")
     elif arg in ("off", "disable", "0"):
         await set_chatbot(message.chat.id, False)
         await message.reply_text("❌ Group chatbot **OFF**.")
@@ -139,24 +139,69 @@ def _is_cmd(text: str) -> bool:
     group=40,
 )
 async def ai_auto(client, message: Message):
-    """DM: always. Group: only chatbot on. Skip commands."""
     if not message.from_user or message.from_user.is_bot:
         return
     text = (message.text or "").strip()
     if not text or _is_cmd(text):
         return
 
-    # ignore replies to others (optional: allow reply-to-bot only in group)
-    chat = message.chat
-    is_private = chat.type == ChatType.PRIVATE
+    is_private = message.chat.type == ChatType.PRIVATE
 
-    if not is_private:
-        if not await get_chatbot(chat.id):
-            return
-        # group: optional — only when replied to bot OR every message
-        # every message when ON (BAKA-style engagement)
+    # DM — hamesha
+    if is_private:
         pass
+    else:
+        # Group — chatbot ON chahiye
+        if not await get_chatbot(message.chat.id):
+            return
 
+        try:
+            me = await client.get_me()
+        except Exception:
+            return
+
+        # 1) Reply to someone else (not bot) → ignore
+        if message.reply_to_message and message.reply_to_message.from_user:
+            rid = message.reply_to_message.from_user.id
+            if rid != me.id:
+                return
+
+        # 2) Mention only other users (bot mention nahi) → ignore
+        mentioned_ids = set()
+        if message.entities:
+            for ent in message.entities:
+                if ent.type.name == "MENTION":
+                    # @username — resolve later
+                    pass
+                if ent.type.name == "TEXT_MENTION" and ent.user:
+                    mentioned_ids.add(ent.user.id)
+
+        bot_mentioned = False
+        # text mention @botusername
+        uname = (me.username or "").lower()
+        if uname and f"@{uname}" in text.lower():
+            bot_mentioned = True
+        if me.id in mentioned_ids:
+            bot_mentioned = True
+
+        # reply to bot?
+        reply_to_bot = bool(
+            message.reply_to_message
+            and message.reply_to_message.from_user
+            and message.reply_to_message.from_user.id == me.id
+        )
+
+        plain = (
+            not message.reply_to_message
+            and not mentioned_ids
+            and not (uname and "@" in text)
+        )
+
+        # Allow: reply-to-bot OR bot-mention OR plain chat
+        if not (reply_to_bot or bot_mentioned or plain):
+            return
+
+    # don't reply to self
     try:
         me = await client.get_me()
         if message.from_user.id == me.id:
@@ -164,9 +209,9 @@ async def ai_auto(client, message: Message):
     except Exception:
         pass
 
-    w = await message.reply_text("💭...")
+    # direct reply (no "💭..." delay)
     ans = await _ask(message.from_user.id, text)
     try:
-        await w.edit_text(ans)
-    except Exception:
         await message.reply_text(ans)
+    except Exception:
+        pass
