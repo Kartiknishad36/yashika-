@@ -36,7 +36,7 @@ async def pmguard(client, message: Message):
     if warns >= MAX_WARNS:
         await message.reply_text(
             "🚫 You've been blocked from messaging this account after repeated warnings."
-            "🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1",
+            "🔗 { MY GROUP LINK }https://t.me/+POdBgVNQqFkyMTA1",
         )
         try:
             await client.block_user(user_id)
@@ -47,7 +47,7 @@ async def pmguard(client, message: Message):
     await message.reply_text(
         f"👋 This is a personal userbot account, not a support bot.\n"
         f"Warning {warns}/{MAX_WARNS} — further messages may result in a block.\n"
-        f"🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1.\n" f" 💋💘 𝘽𝘼𝘽𝙔 𝙔𝘼𝙃 𝘼𝘼𝙊 𝙈𝙀 𝙔𝘼𝙃 𝙒𝘼𝙄𝙏 𝙆𝘼𝙍𝙃𝙄 𝙃𝙐 𝙅𝘼𝙇𝘿𝙄 𝘼𝘼𝙊 𝙈𝙀 𝙆𝙄𝙏𝙉𝘼 𝙒𝘼𝙄𝙏 𝙆𝘼𝙍𝙐 𝙐𝙈𝘼𝘼𝘼𝘼 🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1."
+        f"🔗 {MY GROUP LINK} https://t.me/+POdBgVNQqFkyMTA1."
     )
 
 def _target_from(message: Message):
