@@ -7,7 +7,6 @@ from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
-# Import every module so its handlers register
 MODULES = [
     "modules.owner.sudoers",
     "modules.owner.pmguard",
@@ -40,6 +39,7 @@ MODULES = [
     "modules.games.chase",
     "modules.games.ludo",
     "modules.bot.music",
+    "modules.bot.logger",
 ]
 
 for m in MODULES:
@@ -72,13 +72,18 @@ async def main():
     if bot:
         await bot.start()
         print("[Bot] Bot client started.")
-        # Group mein "/" pe commands dikhane ke liye
         try:
             from modules.bot.bot_commands import setup_bot_commands
             await setup_bot_commands()
             print("[Bot] Bot commands registered.")
         except Exception as e:
             print(f"[Bot] WARNING: set_bot_commands failed: {e}")
+        try:
+            from modules.bot.logger import send_startup_logs
+            await send_startup_logs()
+            print("[Bot] Startup logs sent.")
+        except Exception as e:
+            print(f"[Bot] WARNING: startup logs failed: {e}")
 
     if assistant:
         await assistant.start()
