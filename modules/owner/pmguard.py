@@ -1,5 +1,5 @@
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 from core.clients import app
 from config import OWNER_ID
@@ -8,18 +8,24 @@ from database.mongo import approve_pm, unapprove_pm, get_approved_pm
 
 PREFIXES = [".", "!"]
 
-# user_id -> warning count
+PM_GUARD_GROUP_LINK = "https://t.me/+POdBgVNQqFkyMTA1"
+PM_GUARD_GROUP_ID = -1003064291686
+
 PM_WARNS: dict[int, int] = {}
 MAX_WARNS = 2
 
+def get_pm_buttons():
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("💋 𝐉𝐎𝐈𝐍 𝐆𝐑𝐎𝐔𝐏 💋", url=PM_GUARD_GROUP_LINK)],
+            [InlineKeyboardButton("💖 𝐕𝐄𝐑𝐈𝐅𝐘 𝐊𝐀𝐑𝐎 💖", callback_data="pm_verify")]
+        ]
+    )
 
-# NOTE: group=10 (a late group) is deliberate — command handlers (.login,
-# .ping, etc, all registered in the default group 0) get first chance at
-# any private message. Only messages that don't match ANY command (i.e.
-# plain PM chatter, not part of a recognized flow) fall through to here.
-# This also means the .login phone/OTP flow's plain-text replies are safe:
-# login_flow_capture (group=-10) intercepts those earlier and stops
-# propagation itself when a login is in progress, so pmguard never sees them.
+# Stylish 3D Text
+BIG_LINE_1 = "🥰 𝐁𝐀𝐁𝐘 𝐌𝐔𝐉𝐇𝐒𝐄 𝐁𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐘𝐀𝐇 𝐀𝐀𝐎 𝐍𝐈𝐂𝐇𝐄 𝐃𝐄𝐊𝐇𝐎 𝐆𝐑𝐎𝐔𝐏 𝐌𝐄 𝐇𝐔 𝐌𝐄 𝐎𝐍𝐋𝐈𝐍𝐄 𝐉𝐀𝐋𝐃𝐈 𝐀𝐀𝐎 🥰💋💋"
+BIG_LINE_2 = "❣️ 𝐀𝐆𝐑 𝐌𝐔𝐉𝐇𝐒𝐄 𝐃𝐌 𝐌𝐄 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐏𝐀𝐇𝐋𝐄 𝐆𝐑𝐎𝐔𝐏 𝐉𝐎𝐈𝐍 𝐊𝐀𝐑𝐎 𝐊𝐇𝐔𝐃 𝐊𝐎 𝐕𝐄𝐑𝐈𝐅𝐘 𝐊𝐀𝐑𝐎 𝐅𝐈𝐑 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐓𝐄 𝐇𝐄 𝐍𝐀 🌹🌹❣️"
+
 @app.on_message(filters.private & filters.incoming & ~filters.bot, group=10)
 async def pmguard(client, message: Message):
     user_id = message.from_user.id if message.from_user else None
@@ -35,7 +41,8 @@ async def pmguard(client, message: Message):
 
     if warns >= MAX_WARNS:
         await message.reply_text(
-            "🚫 You've been blocked from messaging this account after repeated warnings."
+            f"{BIG_LINE_1}\n\n{BIG_LINE_2}\n\n🚫 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 {warns}/{MAX_WARNS}",
+            reply_markup=get_pm_buttons()
         )
         try:
             await client.block_user(user_id)
@@ -43,11 +50,53 @@ async def pmguard(client, message: Message):
             pass
         return
 
-    await message.reply_text(
-        f"👋 This is a personal userbot account, not a support bot.\n"
-        f"Warning {warns}/{MAX_WARNS} — further messages may result in a block."
-    )
+    try:
+        member = await client.get_chat_member(PM_GUARD_GROUP_ID, user_id)
+        is_in_group = member.status not in ["left", "kicked", "banned"]
+    except Exception:
+        is_in_group = False
 
+    if is_in_group:
+        text = (
+            f"{BIG_LINE_1}\n\n"
+            f"✅ 𝐓𝐮𝐦 𝐆𝐫𝐨𝐮𝐩 𝐌𝐞 𝐇𝐨, 𝐁𝐚𝐬 𝐕𝐞𝐫𝐢𝐟𝐲 𝐊𝐚𝐫𝐨 𝐁𝐚𝐛𝐲 🥰\n\n"
+            f"{BIG_LINE_2}\n\n"
+            f"⚠️ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 {warns}/{MAX_WARNS}"
+        )
+    else:
+        text = (
+            f"{BIG_LINE_1}\n\n"
+            f"{BIG_LINE_2}\n\n"
+            f"⚠️ 𝐖𝐚𝐫𝐧𝐢𝐧𝐠 {warns}/{MAX_WARNS}"
+        )
+
+    await message.reply_text(text, reply_markup=get_pm_buttons())
+
+@app.on_callback_query(filters.regex("pm_verify"))
+async def pm_verify_cb(client, query: CallbackQuery):
+    user_id = query.from_user.id
+    try:
+        member = await client.get_chat_member(PM_GUARD_GROUP_ID, user_id)
+        is_in_group = member.status not in ["left", "kicked", "banned"]
+    except Exception:
+        await query.answer("Bot group me admin nahi hai!", show_alert=True)
+        return
+
+    if not is_in_group:
+        await query.answer("❌ 𝐏𝐚𝐡𝐥𝐞 𝐆𝐫𝐨𝐮𝐩 𝐉𝐨𝐢𝐧 𝐊𝐚𝐫𝐨 𝐁𝐚𝐛𝐲 😘", show_alert=True)
+        return
+
+    await approve_pm(user_id)
+    PM_WARNS.pop(user_id, None)
+    try:
+        await client.unblock_user(user_id)
+    except Exception:
+        pass
+
+    await query.message.edit_text(
+        f"💋 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 💋\n\n🥰 𝐀𝐛 𝐭𝐮𝐦 𝐃𝐌 𝐦𝐞 𝐜𝐡𝐚𝐭 𝐤𝐚𝐫 𝐬𝐚𝐤𝐭𝐞 𝐡𝐨 𝐁𝐚𝐛𝐲, 𝐣𝐚𝐥𝐝𝐢 𝐚𝐚𝐨 🌹"
+    )
+    await query.answer("✅ Verified Baby! Ab DM karo 💋", show_alert=True)
 
 def _target_from(message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
@@ -59,13 +108,12 @@ def _target_from(message: Message):
             return None, None
     return None, None
 
-
 @app.on_message(filters.command("approve", prefixes=PREFIXES))
 @sudo_only
 async def approve_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        msg = await message.reply_text("Reply to a user or give their ID: `.approve <id>`")
+        await message.reply_text("Reply to a user or give their ID: `.approve <id>`")
         return
     await approve_pm(target)
     PM_WARNS.pop(target, None)
@@ -73,26 +121,24 @@ async def approve_cmd(client, message: Message):
         await client.unblock_user(target)
     except Exception:
         pass
-    msg = await message.reply_text(f"✅ <b>{name}</b> can now PM this account freely, no warnings.")
-
+    await message.reply_text(f"✅ <b>{name}</b> can now PM freely.")
 
 @app.on_message(filters.command("unapprove", prefixes=PREFIXES))
 @sudo_only
 async def unapprove_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        msg = await message.reply_text("Reply to a user or give their ID: `.unapprove <id>`")
+        await message.reply_text("Reply to a user or give their ID: `.unapprove <id>`")
         return
     await unapprove_pm(target)
-    msg = await message.reply_text(f"✅ Removed <b>{name}</b> from the PM-approved list.")
-
+    await message.reply_text(f"✅ Removed <b>{name}</b> from approved.")
 
 @app.on_message(filters.command("approved", prefixes=PREFIXES))
 @sudo_only
 async def approved_cmd(client, message: Message):
     approved = await get_approved_pm()
     if not approved:
-        msg = await message.reply_text("No approved PM users yet.")
+        await message.reply_text("No approved PM users yet.")
         return
     text = "✅ <b>PM-Approved Users</b>\n\n" + "\n".join(f"• <code>{uid}</code>" for uid in approved)
-    msg = await message.reply_text(text)
+    await message.reply_text(text)
