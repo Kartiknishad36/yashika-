@@ -10,7 +10,7 @@ PREFIXES = [".", "!"]
 
 # user_id -> warning count
 PM_WARNS: dict[int, int] = {}
-MAX_WARNS = 3
+MAX_WARNS = 2
 
 
 # NOTE: group=10 (a late group) is deliberate — command handlers (.login,
@@ -36,7 +36,6 @@ async def pmguard(client, message: Message):
     if warns >= MAX_WARNS:
         await message.reply_text(
             "🚫 You've been blocked from messaging this account after repeated warnings."
-            "🔗 { MY GROUP LINK }https://t.me/+POdBgVNQqFkyMTA1",
         )
         try:
             await client.block_user(user_id)
@@ -46,9 +45,9 @@ async def pmguard(client, message: Message):
 
     await message.reply_text(
         f"👋 This is a personal userbot account, not a support bot.\n"
-        f"Warning {warns}/{MAX_WARNS} — further messages may result in a block.\n"
-        f"🔗 {MY GROUP LINK} https://t.me/+POdBgVNQqFkyMTA1."
+        f"Warning {warns}/{MAX_WARNS} — further messages may result in a block."
     )
+
 
 def _target_from(message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
