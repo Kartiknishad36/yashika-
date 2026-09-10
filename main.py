@@ -7,7 +7,7 @@ from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
-# Import every module so its @app.on_message handlers register
+# Import every module so its handlers register
 MODULES = [
     "modules.owner.sudoers",
     "modules.owner.pmguard",
@@ -24,7 +24,7 @@ MODULES = [
     "modules.global_mod.bro",
     "modules.global_mod.welcome",
     "modules.owner.clone",
-    "modules.public.login", 
+    "modules.public.login",
     "modules.bot.start",
     "modules.economy.basic",
     "modules.games.couple",
@@ -50,7 +50,7 @@ for m in MODULES:
 
 
 async def track_new_chats():
-    """Keep the `chats` collection updated so global mod tools know where to act."""
+    """Keep chats list updated for broadcast / global tools."""
     from pyrogram import filters
 
     @app.on_message(filters.group, group=-1)
@@ -72,28 +72,27 @@ async def main():
     if bot:
         await bot.start()
         print("[Bot] Bot client started.")
+        # Group mein "/" pe commands dikhane ke liye
+        try:
+            from modules.bot.bot_commands import setup_bot_commands
+            await setup_bot_commands()
+            print("[Bot] Bot commands registered.")
+        except Exception as e:
+            print(f"[Bot] WARNING: set_bot_commands failed: {e}")
 
     if assistant:
         await assistant.start()
         print("[Bot] Assistant client started.")
 
-    # Eagerly start the main account's VC engine (lazy per-client startup
-    # for clones/logins happens automatically on their first .play).
     await ensure_started(app)
     print("[Bot] PyTgCalls started.")
-
     print("[Bot] Bot is ready.")
 
-    await asyncio.Event().wait()  # run forever
+    await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    # NOTE: We intentionally use get_event_loop() + run_until_complete() here
-    # instead of asyncio.run(). Pyrogram clients are created at import time
-    # (module level in core/clients.py) and grab whatever event loop exists
-    # at that moment via get_event_loop(). asyncio.run() always creates a
-    # brand-new loop, which would then differ from the one the clients
-    # already grabbed -> "attached to a different loop" RuntimeError. Using
-    # get_event_loop() here reuses that same loop.
+    # Pyrogram clients import-time pe loop pakadte hain —
+    # asyncio.run() naya loop banata hai → avoid.
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
