@@ -26,10 +26,17 @@ def _cookies_file() -> str | None:
     path = COOKIES_PATH or "cookies.txt"
     if path and os.path.isfile(path):
         return path
-    # also try project root relative
-    alt = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "cookies.txt")
+    alt = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "cookies.txt",
+    )
     if os.path.isfile(alt):
         return alt
+    # project root (one more level up from modules/)
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    alt2 = os.path.join(root, "cookies.txt")
+    if os.path.isfile(alt2):
+        return alt2
     return None
 
 
@@ -54,10 +61,22 @@ def _ydl_opts(want_video: bool, outtmpl: str) -> dict:
         "no_warnings": True,
         "noplaylist": True,
         "nocheckcertificate": True,
+        "retries": 5,
+        "fragment_retries": 5,
+        "skip_unavailable_fragments": True,
+        # Fix: "The page needs to be reloaded"
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"],
+            }
+        },
     }
     cookies = _cookies_file()
     if cookies:
         opts["cookiefile"] = cookies
+        print(f"[yt-dlp] Using cookies: {cookies}")
+    else:
+        print("[yt-dlp] WARNING: no cookies.txt found")
 
     if want_video:
         opts["format"] = "best[height<=480]/bestaudio/best"
@@ -77,7 +96,9 @@ def _find_output(prefix: str) -> str | None:
     if not os.path.isdir(DOWNLOAD_DIR):
         return None
     for name in os.listdir(DOWNLOAD_DIR):
-        if name.startswith(prefix) and os.path.getsize(os.path.join(DOWNLOAD_DIR, name)) > 0:
+        if name.startswith(prefix) and os.path.getsize(
+            os.path.join(DOWNLOAD_DIR, name)
+        ) > 0:
             return os.path.join(DOWNLOAD_DIR, name)
     return None
 
@@ -178,4 +199,4 @@ async def get_result(query: str, video: bool = False) -> dict:
         "stream_url": path,
         "thumbnail": thumb,
         "video": video,
-    }
+  }
