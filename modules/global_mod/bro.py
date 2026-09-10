@@ -230,7 +230,6 @@ async def brolist_cmd(client, message: Message):
 # ===================== Global Auto-Reply Handler =====================
 @app.on_message(
     filters.incoming
-    & filters.text
     & ~filters.bot
     & ~filters.via_bot
     & ~filters.service,
