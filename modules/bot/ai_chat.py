@@ -1,10 +1,9 @@
 """
-Gemini AI:
-  DM  → always ON for normal text
-  Group → only if /chatbot on
-  /ai /ask always works everywhere
-  /learn /aiclear
-  Multi-language (reply in user's language)
+Gemini chatbot:
+  DM  → always ON
+  Group → /chatbot on  +  (plain | @bot | reply-to-bot)
+          dusre pe reply/tag → silent
+  /ai /ask /learn /aiclear everywhere
 """
 from pyrogram import filters
 from pyrogram.enums import ChatType
@@ -32,11 +31,11 @@ except ImportError:
 
 PREFIXES = ["/", ".", "!"]
 
-SYSTEM = f"""You are {BOT_NAME}, a friendly Telegram AI.
-Reply in the SAME language the user uses (Hindi, English, Hinglish, any language).
-Be short in groups, warmer in private.
-Use known user facts when useful.
-You are an AI, not a human.
+SYSTEM = f"""You are {BOT_NAME}, a fun Telegram group chatbot girl.
+Talk like a real friend — short, casual, natural.
+Match user language (Hindi / English / Hinglish).
+Groups: 1–3 short lines max. No essays.
+Never say you are an AI. No formal tone. Emojis ok.
 """
 
 
@@ -50,23 +49,33 @@ def _model():
 async def _ask(user_id: int, user_text: str) -> str:
     m = _model()
     if m is None:
-        return "❌ Set `GEMINI_API_KEY` + install `google-generativeai`."
+        return "❌ Set GEMINI_API_KEY + install google-generativeai."
 
     facts = await ai_get_facts(user_id)
-    hist = await ai_get_history(user_id, 10)
+    hist = await ai_get_history(user_id, 4)  # short history = faster
+
     lines = []
     if facts:
-        lines.append("User facts:\n- " + "\n- ".join(facts))
+        lines.append("Facts: " + "; ".join(facts[:5]))
     for h in hist:
-        lines.append(("User: " if h["role"] == "user" else "Assistant: ") + h["text"])
-    lines.append(f"User: {user_text}")
-    lines.append("Assistant:")
+        role = "User" if h["role"] == "user" else "You"
+        lines.append(f"{role}: {str(h.get('text', ''))[:300]}")
+    lines.append(f"User: {user_text[:500]}")
+    lines.append("You:")
+
     try:
-        r = await m.generate_content_async("\n".join(lines))
+        r = await m.generate_content_async(
+            "\n".join(lines),
+            generation_config={
+                "max_output_tokens": 120,
+                "temperature": 0.9,
+            },
+        )
         text = (r.text or "...").strip()
     except Exception as e:
         return f"❌ AI error: `{e}`"
-    await ai_append(user_id, "user", user_text)
+
+    await ai_append(user_id, "user", user_text[:500])
     await ai_append(user_id, "assistant", text)
     return text
 
@@ -83,7 +92,9 @@ async def chatbot_toggle(client, message: Message):
     arg = message.command[1].lower()
     if arg in ("on", "enable", "1"):
         await set_chatbot(message.chat.id, True)
-        await message.reply_text("✅ Group chatbot **ON** BABY AAO HUM ROMANTICBATE KARTE HE .")
+        await message.reply_text(
+            "✅ Group chatbot **ON** — plain chat / @bot / reply-to-bot pe reply."
+        )
     elif arg in ("off", "disable", "0"):
         await set_chatbot(message.chat.id, False)
         await message.reply_text("❌ Group chatbot **OFF**.")
@@ -99,12 +110,8 @@ async def ai_manual(client, message: Message):
     if len(parts) < 2:
         await message.reply_text("`/ai your message`")
         return
-    w = await message.reply_text("💭...")
     ans = await _ask(message.from_user.id, parts[1].strip())
-    try:
-        await w.edit_text(ans)
-    except Exception:
-        await message.reply_text(ans)
+    await message.reply_text(ans)
 
 
 @bot.on_message(filters.command("learn", prefixes=PREFIXES))
@@ -133,8 +140,8 @@ def _is_cmd(text: str) -> bool:
 
 @bot.on_message(
     filters.text
-    & ~filters.via_bot
-    & ~filters.service
+    & \~filters.via_bot
+    & \~filters.service
     & filters.incoming,
     group=40,
 )
@@ -147,44 +154,30 @@ async def ai_auto(client, message: Message):
 
     is_private = message.chat.type == ChatType.PRIVATE
 
-    # DM — hamesha
-    if is_private:
-        pass
-    else:
-        # Group — chatbot ON chahiye
+    if not is_private:
         if not await get_chatbot(message.chat.id):
             return
-
         try:
             me = await client.get_me()
         except Exception:
             return
 
-        # 1) Reply to someone else (not bot) → ignore
+        # Reply to someone else → skip
         if message.reply_to_message and message.reply_to_message.from_user:
-            rid = message.reply_to_message.from_user.id
-            if rid != me.id:
+            if message.reply_to_message.from_user.id != me.id:
                 return
 
-        # 2) Mention only other users (bot mention nahi) → ignore
         mentioned_ids = set()
         if message.entities:
             for ent in message.entities:
-                if ent.type.name == "MENTION":
-                    # @username — resolve later
-                    pass
                 if ent.type.name == "TEXT_MENTION" and ent.user:
                     mentioned_ids.add(ent.user.id)
 
-        bot_mentioned = False
-        # text mention @botusername
         uname = (me.username or "").lower()
-        if uname and f"@{uname}" in text.lower():
-            bot_mentioned = True
+        bot_mentioned = bool(uname and f"@{uname}" in text.lower())
         if me.id in mentioned_ids:
             bot_mentioned = True
 
-        # reply to bot?
         reply_to_bot = bool(
             message.reply_to_message
             and message.reply_to_message.from_user
@@ -194,14 +187,19 @@ async def ai_auto(client, message: Message):
         plain = (
             not message.reply_to_message
             and not mentioned_ids
-            and not (uname and "@" in text)
+            and not (uname and f"@{uname}" in text.lower())
         )
 
-        # Allow: reply-to-bot OR bot-mention OR plain chat
         if not (reply_to_bot or bot_mentioned or plain):
             return
+    else:
+        try:
+            me = await client.get_me()
+            if message.from_user.id == me.id:
+                return
+        except Exception:
+            pass
 
-    # don't reply to self
     try:
         me = await client.get_me()
         if message.from_user.id == me.id:
@@ -209,7 +207,6 @@ async def ai_auto(client, message: Message):
     except Exception:
         pass
 
-    # direct reply (no "💭..." delay)
     ans = await _ask(message.from_user.id, text)
     try:
         await message.reply_text(ans)
