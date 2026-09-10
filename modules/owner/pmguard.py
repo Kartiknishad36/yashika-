@@ -1,5 +1,5 @@
 from pyrogram import filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from pyrogram.types import Message
 
 from core.clients import app
 from config import OWNER_ID
@@ -12,7 +12,6 @@ PREFIXES = [".", "!"]
 PM_WARNS: dict[int, int] = {}
 MAX_WARNS = 3
 
-PM_GUARD_GROUP_LINK = "https://t.me/+POdBgVNQqFkyMTA1"
 
 # NOTE: group=10 (a late group) is deliberate — command handlers (.login,
 # .ping, etc, all registered in the default group 0) get first chance at
@@ -34,20 +33,10 @@ async def pmguard(client, message: Message):
     PM_WARNS[user_id] = PM_WARNS.get(user_id, 0) + 1
     warns = PM_WARNS[user_id]
 
-    buttons = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("💋 GROUP JOIN KARO 💋", url=PM_GUARD_GROUP_LINK)],
-            [InlineKeyboardButton("✅ VERIFY KARO ✅", callback_data=f"pm_verify_{user_id}")]
-        ]
-    )
-
     if warns >= MAX_WARNS:
         await message.reply_text(
-            f"🚫 You've been blocked from messaging this account after repeated warnings.\n\n"
-            f"🥰 𝐁𝐀𝐁𝐘 𝐌𝐔𝐉𝐇𝐒𝐄 𝐁𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐘𝐀𝐇 𝐀𝐀𝐎 𝐍𝐈𝐂𝐇𝐄 𝐃𝐄𝐊𝐇𝐎 𝐆𝐑𝐎𝐔𝐏 𝐌𝐄 𝐇𝐔 𝐌𝐄 𝐎𝐍𝐋𝐈𝐍𝐄 𝐉𝐀𝐋𝐃𝐈 𝐀𝐀𝐎 🥰🥰💋💋\n\n"                       
-            f"❣️ 𝐀𝐆𝐑 𝐌𝐔𝐉𝐇𝐒𝐄 𝐃𝐌 𝐌𝐄 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐏𝐀𝐇𝐋𝐄 𝐆𝐑𝐎𝐔𝐏 𝐉𝐎𝐈𝐍 𝐊𝐀𝐑𝐎 𝐊𝐇𝐔𝐃 𝐊𝐎 𝐕𝐄𝐑𝐘𝐅𝐈𝐘 𝐊𝐀𝐑𝐎 𝐅𝐈𝐑 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐓𝐄 𝐇𝐄 𝐍𝐀 ❣️❣️🌹🌹🌹",
-            f"🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1",
-            reply_markup=buttons
+            "🚫 You've been blocked from messaging this account after repeated warnings."
+            "🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1",
         )
         try:
             await client.block_user(user_id)
@@ -57,37 +46,54 @@ async def pmguard(client, message: Message):
 
     await message.reply_text(
         f"👋 This is a personal userbot account, not a support bot.\n"
-        f"Warning {warns}/{MAX_WARNS} — further messages may result in a block.\n\n"
-        f"🥰 𝐁𝐀𝐁𝐘 𝐌𝐔𝐉𝐇𝐒𝐄 𝐁𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐘𝐀𝐇 𝐀𝐀𝐎 𝐍𝐈𝐂𝐇𝐄 𝐃𝐄𝐊𝐇𝐎 𝐆𝐑𝐎𝐔𝐏 𝐌𝐄 𝐇𝐔 𝐌𝐄 𝐎𝐍𝐋𝐈𝐍𝐄 𝐉𝐀𝐋𝐃𝐈 𝐀𝐀𝐎 🥰🥰💋💋\n\n"
-        f"❣️ 𝐀𝐆𝐑 𝐌𝐔𝐉𝐇𝐒𝐄 𝐃𝐌 𝐌𝐄 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐍𝐈 𝐇𝐄 𝐓𝐎 𝐏𝐀𝐇𝐋𝐄 𝐆𝐑𝐎𝐔𝐏 𝐉𝐎𝐈𝐍 𝐊𝐀𝐑𝐎 𝐊𝐇𝐔𝐃 𝐊𝐎 𝐕𝐄𝐑𝐘𝐅𝐈𝐘 𝐊𝐀𝐑𝐎 𝐅𝐈𝐑 𝐂𝐇𝐀𝐓 𝐊𝐀𝐑𝐓𝐄 𝐇𝐄 𝐍𝐀 ❣️❣️🌹🌹🌹", 
-        f"🔗 𝙈𝙔 𝙂𝙍𝙊𝙐𝙋} https://t.me/+POdBgVNQqFkyMTA1",
-        reply_markup=buttons
+        f"Warning {warns}/{MAX_WARNS} — further messages may result in a block."
     )
 
-@app.on_callback_query(filters.regex(r"^pm_verify_"))
-async def pm_verify_cb(client, query: CallbackQuery):
-    try:
-        target_id = int(query.data.split("_")[-1])
-    except:
-        target_id = query.from_user.id
-
-    if query.from_user.id != target_id:
-        await query.answer("Ye button tumhare liye nahi hai!", show_alert=True)
-        return
-
-    await approve_pm(target_id)
-    PM_WARNS.pop(target_id, None)
-    try:
-        await client.unblock_user(target_id)
-    except Exception:
-        pass
-
-    await query.message.edit_text(
-        "✅ 𝐕𝐄𝐑𝐈𝐅𝐈𝐄𝐃 𝐁𝐀𝐁𝐘 🥰\n\nAb tum DM me chat kar sakte ho, auto-approve ho gaye ho 💋🌹"
-    )
-    await query.answer("✅ Verified!", show_alert=True)
 
 def _target_from(message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
         return message.reply_to_message.from_user.id, message.reply_to_message.from_user.first_name
-   
+    if len(message.command) > 1:
+        try:
+            return int(message.command[1]), str(message.command[1])
+        except ValueError:
+            return None, None
+    return None, None
+
+
+@app.on_message(filters.command("approve", prefixes=PREFIXES))
+@sudo_only
+async def approve_cmd(client, message: Message):
+    target, name = _target_from(message)
+    if not target:
+        msg = await message.reply_text("Reply to a user or give their ID: `.approve <id>`")
+        return
+    await approve_pm(target)
+    PM_WARNS.pop(target, None)
+    try:
+        await client.unblock_user(target)
+    except Exception:
+        pass
+    msg = await message.reply_text(f"✅ <b>{name}</b> can now PM this account freely, no warnings.")
+
+
+@app.on_message(filters.command("unapprove", prefixes=PREFIXES))
+@sudo_only
+async def unapprove_cmd(client, message: Message):
+    target, name = _target_from(message)
+    if not target:
+        msg = await message.reply_text("Reply to a user or give their ID: `.unapprove <id>`")
+        return
+    await unapprove_pm(target)
+    msg = await message.reply_text(f"✅ Removed <b>{name}</b> from the PM-approved list.")
+
+
+@app.on_message(filters.command("approved", prefixes=PREFIXES))
+@sudo_only
+async def approved_cmd(client, message: Message):
+    approved = await get_approved_pm()
+    if not approved:
+        msg = await message.reply_text("No approved PM users yet.")
+        return
+    text = "✅ <b>PM-Approved Users</b>\n\n" + "\n".join(f"• <code>{uid}</code>" for uid in approved)
+    msg = await message.reply_text(text)
