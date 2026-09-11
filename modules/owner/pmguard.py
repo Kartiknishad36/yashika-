@@ -22,13 +22,15 @@ try:
 except ImportError:
     FORCE_GROUP_ID = 0
 
+_RESOLVED_CHAT = None
+
 WARN_TEXT = (
     "<b>BABY MUJHSE BAT KARNI HE TO YAH AAO</b>\n"
     "<b>NICHE DEKHO GROUP ME HU ME ONLINE JALDI AAO</b> 🥰🥰💋💋\n\n"
     "<b>AGR MUJHSE DM ME CHAT KARNI HE TO</b>\n"
     "<b>PAHLE GROUP JOIN KARO KHUD KO VERIFY KARO</b>\n"
     "<b>FIR CHAT KARTE HE NA</b> ❣️❣️🌹🌹🌹\n\n"
-    "🔗 Group: <a href=\"{link}\">JOIN GROUP</a>\n\n"
+    '🔗 Group: <a href="{link}">JOIN GROUP</a>\n\n'
     "⚠️ Warning <b>{warns}/{max_warns}</b>\n"
     "3 warning ke baad auto <b>BLOCK</b> 🚫\n\n"
     "✅ Group join ke baad yahan bhejo: <code>.verify</code>"
@@ -44,32 +46,57 @@ def _pm_keyboard() -> InlineKeyboardMarkup:
     )
 
 
+async def _force_chat_id(client):
+    """Prefer FORCE_GROUP_ID; else resolve invite link (userbot must be in group)."""
+    global _RESOLVED_CHAT
+    if FORCE_GROUP_ID:
+        return FORCE_GROUP_ID
+    if _RESOLVED_CHAT:
+        return _RESOLVED_CHAT
+    try:
+        chat = await client.get_chat(FORCE_GROUP_LINK)
+        _RESOLVED_CHAT = chat.id
+        print(f"[pmguard] resolved group id: {_RESOLVED_CHAT}")
+        return _RESOLVED_CHAT
+    except Exception as e:
+        print(f"[pmguard] get_chat failed: {e}")
+        return None
+
+
 async def _is_in_force_group(client, user_id: int) -> bool:
-    chat = FORCE_GROUP_ID or FORCE_GROUP_LINK
-    if not chat:
+    chat_id = await _force_chat_id(client)
+    if not chat_id:
         return False
     try:
-        m = await client.get_chat_member(chat, user_id)
+        m = await client.get_chat_member(chat_id, user_id)
         st = str(getattr(m, "status", "")).lower()
-        return "left" not in st and "ban" not in st and "kick" not in st
-    except Exception:
+        if any(x in st for x in ("left", "banned", "kicked")):
+            return False
+        return True
+    except Exception as e:
+        print(f"[pmguard] get_chat_member({user_id}): {e}")
         return False
 
 
-@app.on_message(filters.private & filters.incoming & ~filters.bot, group=10)
+# text + media (photo/video/sticker/voice/doc) sab pe warn
+@app.on_message(
+    filters.private & filters.incoming & \~filters.bot & \~filters.service,
+    group=10,
+)
 async def pmguard(client, message: Message):
     user_id = message.from_user.id if message.from_user else None
     if user_id is None or user_id in SUDO_USERS or user_id == OWNER_ID:
         return
 
-    # verify command alag handler mein
-    text0 = (message.text or "").strip().lower()
-    if text0 in (".verify", "/verify", "!verify"):
+    text0 = (message.text or message.caption or "").strip().lower()
+    if text0 in (".verify", "/verify", "!verify") or (
+        message.command and message.command[0].lower() == "verify"
+    ):
         return
 
     approved = await get_approved_pm()
     if user_id in approved:
-        return
+        return  # text/photo/video/sticker/voice — sab free
 
     PM_WARNS[user_id] = PM_WARNS.get(user_id, 0) + 1
     warns = PM_WARNS[user_id]
@@ -97,14 +124,12 @@ async def pmguard(client, message: Message):
         )
     else:
         text += (
-            "\n\n👉 Pehle <a href=\"{0}\">GROUP JOIN</a> karo, "
+            f'\n\n👉 Pehle <a href="{FORCE_GROUP_LINK}">GROUP JOIN</a> karo, '
             "phir <code>.verify</code> bhejo."
-        ).format(FORCE_GROUP_LINK)
+        )
 
-    # Userbot: text + link (buttons user account pe hide ho sakte hain)
     await message.reply_text(text, disable_web_page_preview=True)
 
-    # Optional: agar BOT user ko message kar sake (user ne /start kiya ho)
     if bot is not None:
         try:
             await bot.send_message(
@@ -114,7 +139,7 @@ async def pmguard(client, message: Message):
                 disable_web_page_preview=True,
             )
         except Exception:
-            pass  # user ne bot start nahi kiya
+            pass
 
 
 @app.on_message(
@@ -136,11 +161,33 @@ async def verify_cmd(client, message: Message):
         await message.reply_text("Pehle se approved ho ✅")
         return
 
-    if not await _is_in_force_group(client, uid):
+    chat_id = await _force_chat_id(client)
+    if not chat_id:
         await message.reply_text(
-            f"❌ Pehle group join karo:\n{FORCE_GROUP_LINK}\n\n"
-            "Phir dubara <code>.verify</code> bhejo.",
-            disable_web_page_preview=False,
+            "❌ Group id resolve nahi hui.\n"
+            f"1) Link join: {FORCE_GROUP_LINK}\n"
+            "2) **Userbot ko usi group mein admin banao**\n"
+            "3) Railway: `FORCE_GROUP_ID=-100...`\n"
+            "4) Phir `.verify`"
+        )
+        return
+
+    try:
+        m = await client.get_chat_member(chat_id, uid)
+        st = str(getattr(m, "status", "")).lower()
+        ok = not any(x in st for x in ("left", "banned", "kicked"))
+    except Exception as e:
+        await message.reply_text(
+            f"❌ Member check fail: `{e}`\n\n"
+            f"Join: {FORCE_GROUP_LINK}\n"
+            "Userbot group mein admin ho + `FORCE_GROUP_ID` set karo."
+        )
+        return
+
+    if not ok:
+        await message.reply_text(
+            f"❌ Abhi group mein nahi dikh rahe.\n"
+            f"Join: {FORCE_GROUP_LINK}\nPhir `.verify`"
         )
         return
 
@@ -152,13 +199,12 @@ async def verify_cmd(client, message: Message):
         pass
     await message.reply_text(
         f"✅ <b>{user.first_name}</b> verified!\n"
-        "Ab freely baat kar sakte ho 💕"
+        "Ab text / photo / video / sticker / voice sab freely 💕"
     )
 
 
 @app.on_callback_query(filters.regex(r"^pm_verify$"))
 async def pm_verify_cb(client, query: CallbackQuery):
-    # Bot message pe button dabaya ho toh
     user = query.from_user
     if not user:
         return
@@ -175,6 +221,10 @@ async def pm_verify_cb(client, query: CallbackQuery):
         return
     await approve_pm(uid)
     PM_WARNS.pop(uid, None)
+    try:
+        await client.unblock_user(uid)
+    except Exception:
+        pass
     await query.answer("Verified ✅", show_alert=True)
     try:
         await query.message.reply_text("✅ Verified! Ab DM free 💕")
@@ -182,4 +232,55 @@ async def pm_verify_cb(client, query: CallbackQuery):
         pass
 
 
-# ... baaki approve / unapprove / approved same rakho ...
+def _target_from(message: Message):
+    if message.reply_to_message and message.reply_to_message.from_user:
+        return (
+            message.reply_to_message.from_user.id,
+            message.reply_to_message.from_user.first_name,
+        )
+    if len(message.command) > 1:
+        try:
+            return int(message.command[1]), str(message.command[1])
+        except ValueError:
+            return None, None
+    return None, None
+
+
+@app.on_message(filters.command("approve", prefixes=PREFIXES))
+@sudo_only
+async def approve_cmd(client, message: Message):
+    target, name = _target_from(message)
+    if not target:
+        await message.reply_text("Reply / ID: `.approve <id>`")
+        return
+    await approve_pm(target)
+    PM_WARNS.pop(target, None)
+    try:
+        await client.unblock_user(target)
+    except Exception:
+        pass
+    await message.reply_text(f"✅ <b>{name}</b> PM approved (all media ok).")
+
+
+@app.on_message(filters.command("unapprove", prefixes=PREFIXES))
+@sudo_only
+async def unapprove_cmd(client, message: Message):
+    target, name = _target_from(message)
+    if not target:
+        await message.reply_text("Reply / ID: `.unapprove <id>`")
+        return
+    await unapprove_pm(target)
+    await message.reply_text(f"✅ <b>{name}</b> removed from approved.")
+
+
+@app.on_message(filters.command("approved", prefixes=PREFIXES))
+@sudo_only
+async def approved_cmd(client, message: Message):
+    approved = await get_approved_pm()
+    if not approved:
+        await message.reply_text("No approved PM users yet.")
+        return
+    await message.reply_text(
+        "✅ <b>PM-Approved</b>\n\n"
+        + "\n".join(f"• <code>{uid}</code>" for uid in approved)
+    )
