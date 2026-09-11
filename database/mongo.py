@@ -367,3 +367,33 @@ async def ai_learn_fact(user_id: int, fact: str):
 async def ai_get_facts(user_id: int) -> list:
     async with _lock:
         return list(_read().get("ai_facts", {}).get(str(user_id), []))
+# ===================== Feature toggles (global) =====================
+async def set_feature(name: str, enabled: bool):
+    async with _lock:
+        data = _read()
+        data.setdefault("features", {})
+        data["features"][name] = bool(enabled)
+        _write(data)
+
+
+async def get_feature(name: str, default: bool = True) -> bool:
+    async with _lock:
+        data = _read()
+        return bool(data.get("features", {}).get(name, default))
+
+
+# ===================== Per-chat toggles =====================
+async def set_chat_flag(chat_id: int, name: str, enabled: bool):
+    async with _lock:
+        data = _read()
+        data.setdefault("chat_flags", {})
+        entry = data["chat_flags"].setdefault(str(chat_id), {})
+        entry[name] = bool(enabled)
+        _write(data)
+
+
+async def get_chat_flag(chat_id: int, name: str, default: bool = False) -> bool:
+    async with _lock:
+        data = _read()
+        entry = data.get("chat_flags", {}).get(str(chat_id), {})
+        return bool(entry.get(name, default))
