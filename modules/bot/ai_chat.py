@@ -140,8 +140,8 @@ def _is_cmd(text: str) -> bool:
 
 @bot.on_message(
     filters.text
-    & \~filters.via_bot
-    & \~filters.service
+    & ~filters.via_bot
+    & ~filters.service
     & filters.incoming,
     group=40,
 )
