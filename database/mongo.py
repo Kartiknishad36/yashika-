@@ -27,6 +27,10 @@ _DEFAULT = {
     "chatbot": {},
     "ai_history": {},
     "ai_facts": {},
+    "features": {},
+    "chat_flags": {},
+    "notes": {},
+    "track_users": [],
 }
 
 _DEFAULT_BALANCE = 300
@@ -41,7 +45,8 @@ def _read() -> dict:
         with open(_DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         for k, v in _DEFAULT.items():
-            data.setdefault(k, v if not isinstance(v, (dict, list)) else type(v)())
+            if k not in data:
+                data[k] = type(v)() if isinstance(v, (dict, list)) else v
         return data
     except (json.JSONDecodeError, FileNotFoundError):
         return dict(_DEFAULT)
@@ -70,7 +75,7 @@ async def remove_sudo(user_id: int):
         _write(data)
 
 
-async def get_sudoers() -> list[int]:
+async def get_sudoers() -> list:
     async with _lock:
         return list(_read()["sudoers"])
 
@@ -95,7 +100,7 @@ async def is_gbanned(user_id: int) -> bool:
         return str(user_id) in _read()["gbans"]
 
 
-async def get_gban_list() -> list[dict]:
+async def get_gban_list() -> list:
     async with _lock:
         data = _read()
         return [
@@ -119,7 +124,7 @@ async def remove_chat(chat_id: int):
         _write(data)
 
 
-async def get_all_chats() -> list[int]:
+async def get_all_chats() -> list:
     async with _lock:
         return [int(cid) for cid in _read()["chats"].keys()]
 
@@ -140,9 +145,9 @@ async def add_warn(chat_id: int, user_id: int, reason: str = "No reason given") 
         return len(entry)
 
 
-async def get_warns(chat_id: int, user_id: int) -> list[str]:
+async def get_warns(chat_id: int, user_id: int) -> list:
     async with _lock:
-        return list(data.get("warns", {}).get(_warn_key(chat_id, user_id), [])) if False else list(
+        return list(
             _read().get("warns", {}).get(_warn_key(chat_id, user_id), [])
         )
 
@@ -173,7 +178,7 @@ async def unapprove_pm(user_id: int):
         _write(data)
 
 
-async def get_approved_pm() -> list[int]:
+async def get_approved_pm() -> list:
     async with _lock:
         return list(_read().get("approved_pm", []))
 
@@ -230,7 +235,7 @@ async def remove_bro_target(user_id: int):
         _write(data)
 
 
-async def get_bro_targets() -> list[int]:
+async def get_bro_targets() -> list:
     async with _lock:
         return list(_read().get("bro_targets", []))
 
@@ -250,7 +255,6 @@ async def set_vcinfo_enabled(chat_id: int, enabled: bool):
 
 
 async def get_vcinfo_enabled(chat_id: int) -> bool:
-    """Default OFF."""
     async with _lock:
         return bool(_read().get("vcinfo", {}).get(str(chat_id), False))
 
@@ -295,8 +299,7 @@ async def eco_add_balance(user_id: int, amount: int) -> int:
         return int(u["balance"])
 
 
-async def eco_try_daily(user_id: int) -> tuple[bool, int, int]:
-    """Returns (ok, reward_or_seconds_left, new_balance)."""
+async def eco_try_daily(user_id: int):
     async with _lock:
         data = _read()
         u = _eco_user(data, user_id)
@@ -321,7 +324,6 @@ async def set_chatbot(chat_id: int, enabled: bool):
 
 
 async def get_chatbot(chat_id: int) -> bool:
-    """Groups default OFF."""
     async with _lock:
         return bool(_read().get("chatbot", {}).get(str(chat_id), False))
 
@@ -367,6 +369,8 @@ async def ai_learn_fact(user_id: int, fact: str):
 async def ai_get_facts(user_id: int) -> list:
     async with _lock:
         return list(_read().get("ai_facts", {}).get(str(user_id), []))
+
+
 # ===================== Feature toggles (global) =====================
 async def set_feature(name: str, enabled: bool):
     async with _lock:
@@ -382,7 +386,7 @@ async def get_feature(name: str, default: bool = True) -> bool:
         return bool(data.get("features", {}).get(name, default))
 
 
-# ===================== Per-chat toggles =====================
+# ===================== Per-chat flags =====================
 async def set_chat_flag(chat_id: int, name: str, enabled: bool):
     async with _lock:
         data = _read()
@@ -397,3 +401,64 @@ async def get_chat_flag(chat_id: int, name: str, default: bool = False) -> bool:
         data = _read()
         entry = data.get("chat_flags", {}).get(str(chat_id), {})
         return bool(entry.get(name, default))
+
+
+# ===================== Notes =====================
+async def note_set(name: str, text: str):
+    async with _lock:
+        data = _read()
+        data.setdefault("notes", {})
+        data["notes"][name.lower()] = text
+        _write(data)
+
+
+async def note_get(name: str):
+    async with _lock:
+        return _read().get("notes", {}).get(name.lower())
+
+
+async def note_all() -> dict:
+    async with _lock:
+        return dict(_read().get("notes", {}))
+
+
+async def note_del(name: str) -> bool:
+    async with _lock:
+        data = _read()
+        data.setdefault("notes", {})
+        key = name.lower()
+        if key in data["notes"]:
+            del data["notes"][key]
+            _write(data)
+            return True
+        return False
+
+
+async def note_clear():
+    async with _lock:
+        data = _read()
+        data["notes"] = {}
+        _write(data)
+
+
+# ===================== Online tracker =====================
+async def track_list() -> list:
+    async with _lock:
+        return list(_read().get("track_users", []))
+
+
+async def track_add(user_id: int):
+    async with _lock:
+        data = _read()
+        data.setdefault("track_users", [])
+        if user_id not in data["track_users"]:
+            data["track_users"].append(user_id)
+            _write(data)
+
+
+async def track_del(user_id: int):
+    async with _lock:
+        data = _read()
+        data.setdefault("track_users", [])
+        data["track_users"] = [u for u in data["track_users"] if u != user_id]
+        _write(data)
