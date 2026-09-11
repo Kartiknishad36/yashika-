@@ -67,4 +67,82 @@ async def afk_off(client, message: Message):
     if was:
         await message.reply_text(f"✅ Back online (AFK duration: {dur}).")
     else:
-        await message.reply_text("AFK pehle se OFF
+        await message.reply_text("AFK pehle se OFF tha.")
+
+
+@app.on_message(filters.command(["afkstatus"], prefixes=PREFIXES))
+@sudo_only
+async def afk_status(client, message: Message):
+    if not _AFK_ON:
+        await message.reply_text("AFK: **OFF**")
+        return
+    await message.reply_text(
+        f"AFK: **ON**\n"
+        f"Reason: <i>{_AFK_REASON}</i>\n"
+        f"Since: {_fmt_duration(time.time() - _AFK_SINCE)}"
+    )
+
+
+@app.on_message(
+    filters.incoming & \~filters.bot & \~filters.service & \~filters.me,
+    group=15,
+)
+async def afk_watcher(client, message: Message):
+    global _AFK_ON
+    if not _AFK_ON:
+        return
+    if not message.from_user:
+        return
+
+    # ignore own commands path already \~filters.me
+    try:
+        me = await client.get_me()
+    except Exception:
+        return
+
+    uid = message.from_user.id
+    if uid == me.id:
+        return
+
+    should = False
+    # 1) Private chat
+    if message.chat.type == ChatType.PRIVATE:
+        should = True
+    else:
+        # 2) Reply to me
+        if (
+            message.reply_to_message
+            and message.reply_to_message.from_user
+            and message.reply_to_message.from_user.id == me.id
+        ):
+            should = True
+        # 3) Mention me
+        if not should and message.entities and me.username:
+            t = (message.text or message.caption or "").lower()
+            if f"@{me.username.lower()}" in t:
+                should = True
+        if not should and message.entities:
+            for e in message.entities:
+                if e.type.name == "TEXT_MENTION" and e.user and e.user.id == me.id:
+                    should = True
+                    break
+
+    if not should:
+        return
+
+    now = time.time()
+    last = _LAST_REPLY.get(uid, 0)
+    if now - last < REPLY_COOLDOWN:
+        return
+    _LAST_REPLY[uid] = now
+
+    dur = _fmt_duration(now - _AFK_SINCE) if _AFK_SINCE else "?"
+    text = (
+        f"💤 <b>I'm AFK</b>\n"
+        f"Reason: <i>{_AFK_REASON or 'AFK'}</i>\n"
+        f"Since: {dur}"
+    )
+    try:
+        await message.reply_text(text)
+    except Exception:
+        pass
