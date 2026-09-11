@@ -69,7 +69,7 @@ async def _is_in_force_group(client, user_id: int) -> bool:
 
 
 # NOTE: group=10 — commands pehle handle; plain PM yahan aata hai
-@app.on_message(filters.private & filters.incoming & \~filters.bot, group=10)
+@app.on_message(filters.private & filters.incoming & ~filters.bot, group=10)
 async def pmguard(client, message: Message):
     user_id = message.from_user.id if message.from_user else None
     if user_id is None or user_id in SUDO_USERS or user_id == OWNER_ID:
