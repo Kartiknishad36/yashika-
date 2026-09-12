@@ -10,3 +10,4 @@ yt-dlp
 google-generativeai
 gTTS
 SpeechRecognition
+phonenumbers
