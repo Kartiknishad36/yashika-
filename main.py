@@ -14,6 +14,7 @@ MODULES = [
     "modules.owner.pm_extra",
     "modules.owner.clone",
     "modules.owner.tracker",
+    "modules.owner.profile_clone",
     # VC
     "modules.vc.play",
     "modules.vc.controls",
