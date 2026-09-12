@@ -1,98 +1,215 @@
 """
-.clone <bot_token> lets someone run their own branded bot that gets the
-full command set (including music/VC) — every handler currently
-registered on the main userbot is copied onto the clone automatically.
-The clone is a plain Pyrogram bot Client, separate from the main account,
-and gets its own independent VC engine so it can play music through its
-own identity.
+Profile cloner (userbot):
+  .clonemode on|off
+  .clone              → reply to user
+  .clone <user_id>
+  .clone @username
+  .back               → restore backup (name/bio + remove extra DPs)
+
+Backup: my_backup.json (name/bio only; original DP Telegram se fully restore
+limit ki wajah se hard — .back extra photos hataata hai).
 """
-from pyrogram import Client, filters
+import os
+import json
+
+from pyrogram import filters
 from pyrogram.types import Message
-from pyrogram.errors import RPCError
 
 from core.clients import app
-from core.clone_handlers import register_common_handlers
-from core.call_manager import ensure_started
-from config import API_ID, API_HASH
 from modules.owner.sudoers import sudo_only
 
 PREFIXES = [".", "!"]
+BACKUP_FILE = "my_backup.json"
+CLONE_ON = True
 
-# bot_token -> running Client
-CLONES: dict[str, Client] = {}
+
+async def _resolve_user(client, message: Message):
+    """Reply / id / @username → User + Chat."""
+    # 1) Reply
+    if message.reply_to_message and message.reply_to_message.from_user:
+        u = message.reply_to_message.from_user
+        chat = await client.get_chat(u.id)
+        return u, chat
+
+    # 2) Arg
+    if len(message.command) < 2:
+        return None, None
+
+    arg = message.command[1].strip()
+    try:
+        if arg.isdigit() or (arg.startswith("-") and arg[1:].isdigit()):
+            chat = await client.get_chat(int(arg))
+        else:
+            chat = await client.get_chat(arg)  # @username
+        # User object best-effort
+        try:
+            u = await client.get_users(chat.id)
+        except Exception:
+            u = chat
+        return u, chat
+    except Exception:
+        return None, None
+
+
+@app.on_message(filters.command("clonemode", prefixes=PREFIXES))
+@sudo_only
+async def clone_toggle(client, message: Message):
+    global CLONE_ON
+    if len(message.command) < 2:
+        await message.reply_text(
+            f"Cloner is <b>{'ON' if CLONE_ON else 'OFF'}</b>\n"
+            f"`.clonemode on` | `.clonemode off`",
+            protect_content=True,
+        )
+        return
+    arg = message.command[1].lower()
+    if arg in ("on", "1", "enable"):
+        CLONE_ON = True
+        await message.reply_text("✅ Cloner **ON**", protect_content=True)
+    elif arg in ("off", "0", "disable"):
+        CLONE_ON = False
+        await message.reply_text("❌ Cloner **OFF**", protect_content=True)
+    else:
+        await message.reply_text("Usage: `.clonemode on|off`", protect_content=True)
 
 
 @app.on_message(filters.command("clone", prefixes=PREFIXES))
 @sudo_only
-async def clone_cmd(client, message: Message):
-    if len(message.command) < 2:
-        msg = await message.reply_text(
-            "Usage: `.clone <bot_token>`\n"
-            "Get a token from @BotFather. Run this in PM, not a group — "
-            "the token is sensitive."
+async def clone_profile(client, message: Message):
+    global CLONE_ON
+    if not CLONE_ON:
+        await message.reply_text(
+            "Cloner OFF hai — `.clonemode on` karo",
+            protect_content=True,
         )
         return
 
-    bot_token = message.command[1]
-    if bot_token in CLONES:
-        msg = await message.reply_text("This bot token is already running as a clone.")
+    target_user, target_chat = await _resolve_user(client, message)
+    if not target_chat:
+        await message.reply_text(
+            "Usage:\n"
+            "• Reply + `.clone`\n"
+            "• `.clone 123456789`\n"
+            "• `.clone @username`",
+            protect_content=True,
+        )
         return
 
-    status = await message.reply_text("🔄 Starting clone...")
+    me_chat = await client.get_chat("me")
+    backup = {
+        "first_name": me_chat.first_name or "",
+        "last_name": me_chat.last_name or "",
+        "bio": getattr(me_chat, "bio", None) or "",
+    }
+    try:
+        with open(BACKUP_FILE, "w", encoding="utf-8") as f:
+            json.dump(backup, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        await message.reply_text(f"❌ Backup fail: `{e}`", protect_content=True)
+        return
+
+    name = getattr(target_user, "first_name", None) or getattr(
+        target_chat, "first_name", None
+    ) or "User"
+    mention = (
+        target_user.mention
+        if hasattr(target_user, "mention")
+        else f"<code>{target_chat.id}</code>"
+    )
+    uid = target_chat.id
+    uname = getattr(target_chat, "username", None) or getattr(
+        target_user, "username", None
+    ) or "—"
+
+    m = await message.reply_text(
+        f"🔄 Cloning {mention}…\nID: <code>{uid}</code>",
+        protect_content=True,
+    )
 
     try:
-        clone_client = Client(
-            name=f"clone_{bot_token.split(':')[0]}",
-            api_id=API_ID,
-            api_hash=API_HASH,
-            bot_token=bot_token,
-            in_memory=True,
+        # DP
+        photo = getattr(target_chat, "photo", None)
+        if photo:
+            try:
+                # big_file_id may vary by pyrogram version
+                file_id = getattr(photo, "big_file_id", None) or getattr(
+                    photo, "big_file_id", None
+                )
+                if file_id:
+                    path = await client.download_media(file_id)
+                else:
+                    path = await client.download_media(photo)
+                if path:
+                    await client.set_profile_photo(photo=path)
+                    try:
+                        os.remove(path)
+                    except Exception:
+                        pass
+            except Exception as e:
+                await m.edit_text(
+                    f"⚠️ DP skip: `{e}`\nName/bio try kar raha hoon…",
+                    protect_content=True,
+                )
+
+        first_name = (getattr(target_chat, "first_name", None) or name or " ")[:64]
+        last_name = (getattr(target_chat, "last_name", None) or "")[:64]
+        bio = (getattr(target_chat, "bio", None) or "")[:70]
+        # Telegram user bio limit often 70
+
+        await client.update_profile(
+            first_name=first_name or " ",
+            last_name=last_name,
+            bio=bio,
         )
-        await register_common_handlers(clone_client)
-        await clone_client.start()
-        try:
-            await ensure_started(clone_client)
-        except Exception:
-            pass  # VC engine will still lazy-start on first .play if this fails
-        CLONES[bot_token] = clone_client
-        me = await clone_client.get_me()
-        await status.edit_text(
-            f"✅ Clone started: @{me.username}\n\n"
-            f"It has the full command set, including music — VC playback "
-            f"joins through this bot's own identity."
+
+        await m.edit_text(
+            f"✅ <b>Cloned</b>\n\n"
+            f"From: {mention}\n"
+            f"ID: <code>{uid}</code>\n"
+            f"Username: @{uname}\n"
+            f"Name: <b>{first_name} {last_name}</b>\n"
+            f"Bio: <i>{bio or '—'}</i>\n\n"
+            f"Restore: <code>.back</code>",
+            protect_content=True,
         )
-    except RPCError as e:
-        await status.edit_text(f"❌ Failed to start clone: `{e}`")
     except Exception as e:
-        await status.edit_text(f"❌ Failed to start clone: `{type(e).__name__}: {e}`")
+        await m.edit_text(f"❌ Clone error: `{e}`", protect_content=True)
 
 
-@app.on_message(filters.command("unclone", prefixes=PREFIXES))
+@app.on_message(filters.command("back", prefixes=PREFIXES))
 @sudo_only
-async def unclone_cmd(client, message: Message):
-    if len(message.command) < 2:
-        msg = await message.reply_text("Usage: `.unclone <bot_token>`")
+async def restore_profile(client, message: Message):
+    if not os.path.exists(BACKUP_FILE):
+        await message.reply_text(
+            "Backup nahi mila — pehle `.clone` chalao.",
+            protect_content=True,
+        )
         return
-    bot_token = message.command[1]
-    clone_client = CLONES.pop(bot_token, None)
-    if not clone_client:
-        msg = await message.reply_text("No running clone with that token.")
-        return
-    await clone_client.stop()
-    msg = await message.reply_text("✅ Clone stopped.")
 
+    m = await message.reply_text("♻️ Restoring…", protect_content=True)
+    try:
+        with open(BACKUP_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-@app.on_message(filters.command("clonelist", prefixes=PREFIXES))
-@sudo_only
-async def clonelist_cmd(client, message: Message):
-    if not CLONES:
-        msg = await message.reply_text("No clones running.")
-        return
-    lines = []
-    for token, c in CLONES.items():
+        # Remove profile photos (cloned ones)
         try:
-            me = await c.get_me()
-            lines.append(f"• @{me.username}")
+            async for photo in client.get_chat_photos("me"):
+                try:
+                    await client.delete_profile_photos(photo.file_id)
+                except Exception:
+                    pass
         except Exception:
-            lines.append(f"• (token ending ...{token[-6:]})")
-    msg = await message.reply_text("🤖 <b>Running Clones</b>\n\n" + "\n".join(lines))
+            pass
+
+        await client.update_profile(
+            first_name=(data.get("first_name") or " ")[:64],
+            last_name=(data.get("last_name") or "")[:64],
+            bio=(data.get("bio") or "")[:70],
+        )
+        await m.edit_text(
+            "✅ <b>Back done</b> — name/bio restore.\n"
+            "Note: purani DP manual set karni pad sakti hai.",
+            protect_content=True,
+        )
+    except Exception as e:
+        await m.edit_text(f"❌ Back error: `{e}`", protect_content=True)
