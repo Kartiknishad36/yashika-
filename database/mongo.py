@@ -217,32 +217,54 @@ async def get_welcome_text(chat_id: int) -> str:
         return entry.get("text") or DEFAULT_WELCOME_TEXT
 
 
-# ===================== Bro targets =====================
-async def add_bro_target(user_id: int):
+# ===================== Bro targets (with mode) =====================
+# storage: "bro_targets" -> { "uid": "all"|"dm"|"group" }
+# old list format auto-migrate
+
+async def add_bro_target(user_id: int, mode: str = "all"):
+    mode = mode if mode in ("all", "dm", "group") else "all"
     async with _lock:
         data = _read()
-        data.setdefault("bro_targets", [])
-        if user_id not in data["bro_targets"]:
-            data["bro_targets"].append(user_id)
+        raw = data.get("bro_targets", {})
+        # migrate list -> dict
+        if isinstance(raw, list):
+            raw = {str(u): "all" for u in raw}
+        data["bro_targets"] = raw
+        data["bro_targets"][str(user_id)] = mode
         _write(data)
 
 
 async def remove_bro_target(user_id: int):
     async with _lock:
         data = _read()
-        data.setdefault("bro_targets", [])
-        data["bro_targets"] = [u for u in data["bro_targets"] if u != user_id]
+        raw = data.get("bro_targets", {})
+        if isinstance(raw, list):
+            data["bro_targets"] = [u for u in raw if u != user_id]
+        else:
+            data.setdefault("bro_targets", {})
+            data["bro_targets"].pop(str(user_id), None)
         _write(data)
 
 
 async def get_bro_targets() -> list:
     async with _lock:
-        return list(_read().get("bro_targets", []))
+        raw = _read().get("bro_targets", {})
+        if isinstance(raw, list):
+            return list(raw)
+        return [int(k) for k in raw.keys()]
+
+
+async def get_bro_mode(user_id: int) -> str | None:
+    """None = not targeted. Else all|dm|group"""
+    async with _lock:
+        raw = _read().get("bro_targets", {})
+        if isinstance(raw, list):
+            return "all" if user_id in raw else None
+        return raw.get(str(user_id))
 
 
 async def is_bro_target(user_id: int) -> bool:
-    async with _lock:
-        return user_id in _read().get("bro_targets", [])
+    return await get_bro_mode(user_id) is not None
 
 
 # ===================== VC info (per chat) =====================
