@@ -1,17 +1,14 @@
 """
-.bro — Global Auto-Reply system.
-
-Usage:
-  Reply to someone + .bro        → Enable global auto-reply for that user
-  .bro off  (or .unbro)          → Disable auto-reply (reply to user or give ID)
-  .brolist                       → Show all users with auto-reply enabled
-
-Once enabled, whenever that user sends a message (in any group or DM),
-the userbot will automatically reply with:  @Name, <random line>
+.bro / .broall   → reply user → auto-reply DM + GROUP
+.brodm           → reply user → only DM
+.brogroup        → reply user → only GROUP
+.bro off / .unbro → disable
+.brolist
 """
 import random
 from pyrogram import filters
 from pyrogram.types import Message
+from pyrogram.enums import ChatType
 
 from core.clients import app
 from modules.owner.sudoers import sudo_only
@@ -19,12 +16,13 @@ from database.mongo import (
     add_bro_target,
     remove_bro_target,
     get_bro_targets,
+    get_bro_mode,
     is_bro_target,
 )
 
 PREFIXES = [".", "!"]
 
-BRO_LINES = [
+# ... BRO_LINES = [
     "𝗠𝗔̂𝗔̂𝗗𝗔𝗥𝗖𝗛Ø𝗗 𝗧𝗘𝗥𝗜 𝗠𝗔́𝗔̀ 𝗞𝗜 𝗖𝗛𝗨𝗨́𝗧 𝗠𝗘 𝗚𝗛𝗨𝗧𝗞𝗔 𝗞𝗛𝗔𝗔𝗞𝗘 𝗧𝗛𝗢𝗢𝗞 𝗗𝗨𝗡𝗚𝗔 🤣🤣",
     "𝗧𝗘𝗥𝗘 𝗕𝗘́𝗛𝗘𝗡 𝗞 𝗖𝗛𝗨𝗨́𝗧 𝗠𝗘 𝗖𝗛𝗔𝗞𝗨 𝗗𝗔𝗔𝗟 𝗞𝗔𝗥 𝗖𝗛𝗨𝗨́𝗧 𝗞𝗔 𝗞𝗛𝗢𝗢𝗡 𝗞𝗔𝗥 𝗗𝗨𝗚𝗔",
     "𝗧𝗘𝗥𝗜 𝗩𝗔𝗛𝗘𝗘𝗡 𝗡𝗛𝗜 𝗛𝗔𝗜 𝗞𝗬𝗔? 9 𝗠𝗔𝗛𝗜𝗡𝗘 𝗥𝗨𝗞 𝗦𝗔𝗚𝗜 𝗩𝗔𝗛𝗘𝗘𝗡 𝗗𝗘𝗧𝗔 𝗛𝗨 🤣🤣🤩",
@@ -146,47 +144,59 @@ BRO_LINES = [
     "𝗧𝗘𝗥𝗜 𝗠𝗔́𝗔̀𝗞𝗢 𝗞𝗛𝗨𝗟𝗘 𝗕𝗔𝗝𝗔𝗥 𝗠𝗘 𝗖𝗛𝗢𝗗 𝗗𝗔𝗟𝗔 🤣🤣💋",
 ]
 
-
 def cmd(name):
     return filters.command(name, prefixes=PREFIXES)
 
 
-# ===================== Enable Auto-Reply =====================
-@app.on_message(cmd("bro"))
-@sudo_only
-async def bro_cmd(client, message: Message):
-    # .bro off / .bro stop
-    if len(message.command) > 1 and message.command[1].lower() in ("off", "stop", "remove", "del"):
-        return await _disable_bro(client, message)
-
-    # Must reply to a user
+async def _enable(client, message: Message, mode: str):
     if not message.reply_to_message or not message.reply_to_message.from_user:
         await message.reply_text(
-            "Kisi user ko **reply** karke `.bro` likho.\n"
-            "Uspe Global Auto-Reply lag jayega.\n\n"
-            "Hataane ke liye: reply + `.bro off` ya `.unbro`"
+            f"Kisi user pe **reply** karke command likho.\n"
+            f"Mode: <b>{mode}</b>\n\n"
+            f"`.bro` / `.broall` — DM+Group\n"
+            f"`.brodm` — sirf DM\n"
+            f"`.brogroup` — sirf Group\n"
+            f"`.bro off` / `.unbro` — hatao"
         )
         return
 
     target = message.reply_to_message.from_user
-    target_id = target.id
-
-    # Don't allow on self
     me = await client.get_me()
-    if target_id == me.id:
-        await message.reply_text("Khud pe auto-reply nahi laga sakte 😅")
+    if target.id == me.id:
+        await message.reply_text("Khud pe auto-reply nahi 😅")
         return
 
-    await add_bro_target(target_id)
-
-    name = target.first_name or str(target_id)
+    await add_bro_target(target.id, mode)
+    label = {"all": "DM + Group", "dm": "sirf DM", "group": "sirf Group"}[mode]
     await message.reply_text(
-        f"✅ Global Auto-Reply **ON** for <a href='tg://user?id={target_id}'>{name}</a>\n"
-        f"Ab jab bhi yeh user kahin message karega (group/DM), auto reply jayega."
+        f"✅ Auto-Reply <b>ON</b> ({label})\n"
+        f"User: {target.mention}\n"
+        f"ID: <code>{target.id}</code>"
     )
 
 
-# ===================== Disable Auto-Reply =====================
+@app.on_message(cmd(["bro", "broall"]))
+@sudo_only
+async def bro_cmd(client, message: Message):
+    if len(message.command) > 1 and message.command[1].lower() in (
+        "off", "stop", "remove", "del",
+    ):
+        return await _disable_bro(client, message)
+    await _enable(client, message, "all")
+
+
+@app.on_message(cmd("brodm"))
+@sudo_only
+async def brodm_cmd(client, message: Message):
+    await _enable(client, message, "dm")
+
+
+@app.on_message(cmd("brogroup"))
+@sudo_only
+async def brogroup_cmd(client, message: Message):
+    await _enable(client, message, "group")
+
+
 @app.on_message(cmd(["unbro", "brooff"]))
 @sudo_only
 async def unbro_cmd(client, message: Message):
@@ -195,39 +205,31 @@ async def unbro_cmd(client, message: Message):
 
 async def _disable_bro(client, message: Message):
     target_id = None
-
     if message.reply_to_message and message.reply_to_message.from_user:
         target_id = message.reply_to_message.from_user.id
-    elif len(message.command) > 1 and message.command[-1].isdigit():
+    elif len(message.command) > 1 and message.command[-1].lstrip("-").isdigit():
         target_id = int(message.command[-1])
-
     if not target_id:
-        await message.reply_text(
-            "User ko reply karke `.bro off` / `.unbro` likho,\n"
-            "ya ID do: `.unbro 123456789`"
-        )
+        await message.reply_text("Reply + `.unbro` ya `.unbro <id>`")
         return
-
     await remove_bro_target(target_id)
-    await message.reply_text(f"✅ Auto-Reply **OFF** for `<code>{target_id}</code>`")
+    await message.reply_text(f"✅ Auto-Reply **OFF** for <code>{target_id}</code>")
 
 
-# ===================== List =====================
 @app.on_message(cmd("brolist"))
 @sudo_only
 async def brolist_cmd(client, message: Message):
     targets = await get_bro_targets()
     if not targets:
-        await message.reply_text("Koi bhi user auto-reply list mein nahi hai.")
+        await message.reply_text("List khali hai.")
         return
+    lines = []
+    for uid in targets:
+        mode = await get_bro_mode(uid) or "?"
+        lines.append(f"• <code>{uid}</code> — <b>{mode}</b>")
+    await message.reply_text("💕 <b>Bro list</b>\n\n" + "\n".join(lines))
 
-    lines = [f"• <code>{uid}</code>" for uid in targets]
-    await message.reply_text(
-        "💕 <b>Auto-Reply ON for:</b>\n\n" + "\n".join(lines)
-    )
 
-
-# ===================== Global Auto-Reply Handler =====================
 @app.on_message(
     filters.incoming
     & ~filters.bot
@@ -238,14 +240,11 @@ async def brolist_cmd(client, message: Message):
 async def bro_auto_reply(client, message: Message):
     if not message.from_user:
         return
-
     user_id = message.from_user.id
-
-    # Skip if not a target
-    if not await is_bro_target(user_id):
+    mode = await get_bro_mode(user_id)
+    if not mode:
         return
 
-    # Don't reply to own messages
     try:
         me = await client.get_me()
         if user_id == me.id:
@@ -253,18 +252,21 @@ async def bro_auto_reply(client, message: Message):
     except Exception:
         pass
 
-    # Don't reply to commands
-    if message.text and message.text.startswith((".", "!")):
+    # mode filter
+    is_private = message.chat.type == ChatType.PRIVATE
+    if mode == "dm" and not is_private:
+        return
+    if mode == "group" and is_private:
+        return
+    # mode == "all" → both
+
+    text = message.text or message.caption or ""
+    if text.startswith((".", "!", "/")):
         return
 
     line = random.choice(BRO_LINES)
-    user = message.from_user
-
-    # Mention + message
-    mention = user.mention if (user.username or user.first_name) else f"<a href='tg://user?id={user.id}'>{user.first_name or 'User'}</a>"
-    text = f"{mention}, {line}"
-
+    mention = message.from_user.mention
     try:
-        await message.reply_text(text)
+        await message.reply_text(f"{mention}, {line}")
     except Exception:
         pass
