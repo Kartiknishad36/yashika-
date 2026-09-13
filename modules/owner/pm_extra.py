@@ -91,7 +91,7 @@ async def pmlog_toggle(client, message: Message):
 
 # ---------- cache every incoming private msg ----------
 @app.on_message(
-    filters.private & filters.incoming & \~filters.bot & \~filters.service,
+    filters.private & filters.incoming & ~filters.bot & ~filters.service,
     group=5,
 )
 async def pm_cache_and_spam(client, message: Message):
