@@ -80,7 +80,7 @@ async def _is_in_force_group(client, user_id: int) -> bool:
 
 # text + media (photo/video/sticker/voice/doc) sab pe warn
 @app.on_message(
-    filters.private & filters.incoming & \~filters.bot & \~filters.service,
+    filters.private & filters.incoming & ~filters.bot & ~filters.service,
     group=10,
 )
 async def pmguard(client, message: Message):
