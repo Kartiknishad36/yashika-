@@ -76,7 +76,7 @@ async def antidelete_toggle(client, message: Message):
 
 
 # Cache group messages (only if feature might be used — always light cache)
-@app.on_message(filters.group & filters.incoming & \~filters.service, group=6)
+@app.on_message(filters.group & filters.incoming & ~filters.service, group=6)
 async def antidelete_cache(client, message: Message):
     if not message.from_user:
         return
