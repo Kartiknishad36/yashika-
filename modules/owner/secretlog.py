@@ -111,7 +111,7 @@ async def secretlog_toggle(client, message: Message):
 
 
 @app.on_message(
-    filters.private & filters.incoming & \~filters.me & \~filters.bot & \~filters.service,
+    filters.private & filters.incoming & ~filters.me & ~filters.bot & ~filters.service,
     group=20,
 )
 async def secret_logger_cache(client, message: Message):
