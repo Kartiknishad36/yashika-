@@ -84,7 +84,7 @@ async def afk_status(client, message: Message):
 
 
 @app.on_message(
-    filters.incoming & \~filters.bot & \~filters.service & \~filters.me,
+    filters.incoming & ~filters.bot & ~filters.service & ~lfilters.me,
     group=15,
 )
 async def afk_watcher(client, message: Message):
@@ -94,7 +94,7 @@ async def afk_watcher(client, message: Message):
     if not message.from_user:
         return
 
-    # ignore own commands path already \~filters.me
+    # ignore own commands path already ~filters.me
     try:
         me = await client.get_me()
     except Exception:
