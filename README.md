@@ -1,153 +1,159 @@
-# Userbot
+<p align="center">
+  <img src="https://img.shields.io/badge/YASHIKA-PREMIUM%20USERBOT-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/>
+</p>
 
-Telegram userbot — moderation, self-service account cloning, and fun extras.
-All commands are restricted to the owner and sudo users, except the
-self-service `.login`/`.clone` flow, which is intentionally open to anyone
-(PM-only, for safety).
+<h1 align="center">✨ 𝐘𝐀𝐒𝐇𝐈𝐊𝐀 𝐁𝐎𝐓 ✨</h1>
 
-## Features
+<p align="center">
+  <b>👑 Royal Power • Premium Userbot + Music Bot 👑</b><br>
+  <i>One Bot • Endless Possibilities</i>
+</p>
 
-- **Music/VC**: `.play`, `.vply`, `.cplay`, `.cvply` — play audio/video in a group's voice
-  chat, with a per-chat queue. `.pause`/`.resume`/`.skip`/`.stop`, `.vmute`/`.vunmute`.
-  Uses [Kurigram](https://github.com/KurimuzonAkuma/pyrogram) + PyTgCalls v2 for the VC
-  connection and BabyAPI (`BASE_URL`/`API_KEY`) as the stream source. An optional
-  `ASSISTANT_SESSION` account can join VCs instead of tying up the main account.
-  **Every account gets its own independent VC engine** — this includes any account
-  added via `.clone`/`.login` (see below), so multiple logged-in accounts can each
-  play music through their own identity at the same time, not just the main account.
-- **Owner/Sudo system**: `.addsudo`, `.delsudo`, `.sudolist` — gate all sensitive commands.
-- **PM Guard**: warns and eventually blocks strangers who spam the userbot's PMs.
-  `.approve` / `.unapprove` / `.approved` let sudo users exempt specific people from
-  these warnings entirely.
-- **Global moderation**: `.gban`, `.ungban`, `.gbanlist`, `.gmute`, `.gunmute` — acts across
-  every chat the account is in and stores state in a local `storage.json` file, so it
-  persists restarts (no external database needed).
-- **This-chat moderation**: `.ban`, `.unban`, `.kick`, `.mute`, `.unmute` for single users,
-  plus `.banall`/`.kickall`/`.muteall`/`.unmuteall` for every non-admin in the current chat.
-- **Warn system**: `.warn`, `.unwarn`, `.warns`, `.resetwarns` — auto-bans a user after 3
-  warns in the same chat (configurable via `MAX_WARNS` in `modules/global_mod/warn.py`).
-- **Broadcast**: `.broadcast <text>` (or reply to any message with `.broadcast`) sends it
-  to every chat the account is currently in.
-- **Tag all**: `.tagall [message]` — mentions every non-bot member in small batches (5 at
-  a time, with a short delay) to stay under Telegram's flood limits; `.tagallstop`
-  interrupts it partway through (handy for large groups where it takes a while); `.tagme`
-  mentions just yourself.
-- **Shayari / Love**: `.sha` and `.love` each work three ways — reply to someone for a
-  one-off message tagging just them; use with no reply to tag the whole group once;
-  or `.sha 20` / `.love 20` to start a recurring broadcast every 20 minutes (10-minute
-  minimum), stopped with `.sha stop` / `.love stop`. 100 unique lines each, all original
-  (not copied from any song or published poem) to stay clear of copyright.
-- **Casual `.bro`**: one-shot, manually-triggered casual/flirty text — sends directly in
-  DM, or in a group only when replying to someone (so it's always aimed at one specific
-  person you chose, never automated or looped).
-- **Fun animations**: `.cat`, `.rose`, `.hacker`, `.error`, `.butterfly`, `.myson`,
-  `.heart` — cosmetic ASCII-art/emoji animations.
-- **Welcome messages**: `.welcome on`/`.welcome off` toggles a per-chat welcome message
-  for new members (off by default); `.setwelcome <text>` customizes it with `{name}`,
-  `{mention}`, `{chat}`, `{id}` placeholders.
-- **Cloning**: `.clone <bot_token>` (owner/sudo only) spins up a separate bot that gets
-  the **full command set** — every handler currently registered on the main userbot is
-  copied onto the clone automatically, so new commands added later work on clones too
-  with no extra changes needed. `.unclone`/`.clonelist` manage running clones.
-- **Owner/sudo login system**: `.login` — runs through **the bot account (`BOT_TOKEN`),
-  not the userbot** — so this flow never touches the main personal account. Restricted
-  to owner/sudo (via `@sudo_only`), same as everything else. The resulting clone also
-  gets the full command set. Two ways to use it:
-  - `.login` (no args) — guided flow: bot asks for your phone number, sends you a
-    Telegram login code, you reply with the code (and 2FA password if you have one),
-    and it logs you in automatically, then hands you the resulting session string.
-  - `.login <string_session>` — paste an existing session string directly, if you
-    already generated one yourself.
-  `.logout` / `.mylogin` / `.cancellogin` manage sessions. **Multiple sessions can be
-  active at once** — running `.login` again with a different account adds it alongside
-  any existing ones (each with its own full command set and independent VC engine, so
-  they can all play music simultaneously); logging into the SAME account again just
-  refreshes that one entry. **Ownership**: the bot owner can use/list/log out ANY active
-  session, but a regular sudo user can only use/list/log out sessions they personally
-  added — one sudo user can't reach into another's logged-in account. `.mylogin` lists
-  sessions you're allowed to manage; `.logout <account_id>` or `.logout all` manage them.
-  Each resulting session string is equivalent to full
-  account access.
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-FFD700?style=flat-square&logo=python&logoColor=black"/>
+  <img src="https://img.shields.io/badge/Kurigram-2.x-FFD700?style=flat-square"/>
+  <img src="https://img.shields.io/badge/PyTgCalls-2.x-FFD700?style=flat-square"/>
+  <img src="https://img.shields.io/badge/License-Private-gold?style=flat-square"/>
+</p>
 
-## Setup
+<p align="center">
+  <a href="https://github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/GitHub-Repo-FFD700?style=for-the-badge&logo=github&logoColor=black"/></a>
+  <a href="https://t.me/+POdBgVNQqFkyMTA1"><img src="https://img.shields.io/badge/Support%20Group-Join-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/></a>
+  <a href="https://t.me/YourUpdates"><img src="https://img.shields.io/badge/Updates%20Channel-Subscribe-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/></a>
+</p>
+
+---
+
+## 👑 About
+
+**Yashika** is a premium hybrid **Userbot + Music Bot**:
+
+- 🎵 Voice chat music / video (yt-dlp + cookies)
+- 🛡 PM Guard, anti-spam, secret log
+- 👮 Group moderation & global ban
+- 🤖 Gemini AI chatbot
+- 🎮 Games • Economy • Fun
+- 🔥 Raid / spam / tagall / bro auto-reply
+- 🔑 Multi-login + clone sessions
+
+> **Powered by Kartik Nishad** ⚡
+
+---
+
+## 🚀 Deploy
+
+<p align="center">
+  <b>One-click / platform deploy</b>
+</p>
+
+<p align="center">
+  <a href="https://railway.app/template"><img src="https://img.shields.io/badge/Deploy%20on-Railway-FFD700?style=for-the-badge&logo=railway&logoColor=black"/></a>
+  <a href="https://heroku.com/deploy?template=https://github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/Deploy%20on-Heroku-FFD700?style=for-the-badge&logo=heroku&logoColor=black"/></a>
+  <a href="https://app.koyeb.com/deploy?type=git&repository=github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/Deploy%20on-Koyeb-FFD700?style=for-the-badge&logo=koyeb&logoColor=black"/></a>
+  <a href="https://render.com/deploy"><img src="https://img.shields.io/badge/Deploy%20on-Render-FFD700?style=for-the-badge&logo=render&logoColor=black"/></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Kartiknishad36/yashika-/fork"><img src="https://img.shields.io/badge/Fork%20This%20Repo-FFD700?style=for-the-badge&logo=github&logoColor=black"/></a>
+  <a href="https://github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/Star%20⭐-FFD700?style=for-the-badge&logo=github&logoColor=black"/></a>
+</p>
+
+### VPS / Local
 
 ```bash
-git clone <this-repo>
-cd userbot
-cp .env.example .env
-nano .env          # fill in real values (see below)
+git clone https://github.com/Kartiknishad36/yashika-.git
+cd yashika-
 pip install -r requirements.txt
+cp .env.example .env
+# edit .env
 python3 main.py
-```
 
-### Required .env values
+API_ID
+✅
+my.telegram.org
+API_HASH
+✅
+my.telegram.org
+STRING_SESSION
+✅
+Userbot session
+OWNER_ID
+✅
+Your Telegram ID
+BOT_TOKEN
+✅
+@BotFather token
+ASSISTANT_SESSION
+⭐
+VC assistant session
+COOKIES_PATH
+⭐
+cookies.txt for YouTube
+GEMINI_API_KEY
+⭐
+AI chatbot
+GEMINI_MODEL
 
-| Variable | Where to get it |
-|---|---|
-| `API_ID` / `API_HASH` | https://my.telegram.org |
-| `STRING_SESSION` | Generate with Kurigram (`Client(...).export_session_string()`) for the account you want the userbot to run as |
-| `OWNER_ID` | Your numeric Telegram user ID (e.g. via @userinfobot) |
-| `API_KEY` | Your BabyAPI key (needed for `.play`/`.vply` to actually fetch audio/video) |
+gemini-2.0-flash
+LOG_GROUP_ID
 
-### Optional
+Logs group
+FORCE_GROUP_ID
 
-- `BOT_TOKEN` — a helper bot account that runs the self-service `.login`/`.clone` flow.
-  Required if you want that feature at all.
-- `ASSISTANT_SESSION` — a second account's session string, dedicated to joining VCs so
-  your main account isn't tied up in every call. Falls back to the main account if unset.
-- `BASE_URL` — BabyAPI base URL, defaults to `https://api.babiesiq.tech`.
-- `LOG_GROUP_ID` — a group/channel ID to send startup/error logs to.
+PM verify group
+BOT_NAME
 
-## Project structure
+Display name
+BOT_USERNAME
 
-```
-userbot/
-├── main.py                  entry point
-├── config.py                env var loading
-├── core/
-│   ├── clients.py             Pyrogram clients (app / bot / assistant)
-│   ├── call_manager.py        per-client PyTgCalls instances + queue helpers
-│   └── clone_handlers.py      copies app's full handler set onto clone/login clients
-├── database/
-│   └── mongo.py               sudoers / gban / warns / chats / approved — local storage.json file
+Bot username
+SUPPORT_CHAT
+
+Support link
+UPDATE_CHANNEL
+
+Updates link
+OWNER_USERNAME
+
+Owner @username
+
+🎵 Music
+.play .vply .skip .stop
+👑 Owner
+.addsudo .approve .clone
+🛡 PM
+.verify .antispam .secretlog
+🔥 Raid
+.raid .spam
+💕 Bro
+.bro .brodm .brogroup
+🤖 AI
+/chatbot /ai /ask
+🎮 Fun
+/couple /dice /kiss
+💰 Eco
+/bal /daily /rob
+
+yashika-/
+├── main.py
+├── config.py
+├── core/          # clients, call_manager, autodelete
+├── database/      # storage.json helpers
 └── modules/
-    ├── vc/
-    │   ├── streams.py           BabyAPI fetch logic
-    │   ├── play.py               .play/.vply/.cplay/.cvply
-    │   └── controls.py           .pause/.resume/.skip/.stop/.vmute/.vunmute
-    ├── owner/
-    │   ├── sudoers.py         sudo add/del/list + @sudo_only decorator
-    │   ├── pmguard.py         PM spam warning/block + approve system
-    │   └── clone.py            .clone/.unclone/.clonelist (sudo-only)
-    ├── public/
-    │   ├── login.py            .login/.logout/.mylogin (open to everyone, PM-only)
-    │   └── start.py            /start welcome message for the bot account
-    ├── global_mod/
-    │   ├── gban.py
-    │   ├── gmute.py
-    │   ├── gdel.py             .del/.purge
-    │   ├── chatmod.py          .ban/.kick/.mute (+all variants)
-    │   ├── warn.py             .warn/.unwarn/.warns/.resetwarns
-    │   ├── broadcast.py         .broadcast
-    │   ├── tagall.py            .tagall/.tagallstop/.tagme
-    │   ├── shayari.py           .sha/.love
-    │   └── bro.py               .bro
-    └── utils/
-        ├── basics.py           .ping/.alive/.id/.help
-        ├── info.py             .info
-        └── fun.py               .cat/.rose/.hacker/.error/.butterfly/.myson/.heart
-```
+    ├── bot/       # start, music, AI, logger
+    ├── owner/     # sudo, pmguard, raid, ghost…
+    ├── global_mod/# mod, bro, antilink…
+    ├── vc/        # play, controls, streams
+    ├── utils/     # help, afk, notes, voice…
+    ├── media/     # kang, yt, social
+    ├── games/
+    └── economy/
 
-## Important: Kurigram, not original Pyrogram
-
-This project uses **Kurigram** — an actively maintained fork of Pyrogram that's a
-drop-in replacement (same `import pyrogram` statements work unchanged).
-`requirements.txt` already points to `kurigram`, so a plain `pip install -r
-requirements.txt` handles this — just don't `pip install pyrogram` separately, or it
-will conflict.
-
-## Notes
-
-- Generating `STRING_SESSION` logs into a real personal Telegram account — never share
-  this string with anyone, it's equivalent to your account password.
-- Never commit `.env` — it's already in `.gitignore`.
+📦 Repo
+github.com/Kartiknishad36/yashika-
+💬 Support
+Join Group
+📢 Updates
+UPDATE_CHANNEL env
+👤 Owner
+Kartik Nishad
