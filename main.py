@@ -14,10 +14,16 @@ MODULES = [
     "modules.owner.pm_extra",
     "modules.owner.clone",
     "modules.owner.tracker",
-    "modules.owner.profile_clone",
+    "modules.owner.raid_spam",
+    "modules.owner.ghostmod",
+    "modules.owner.secretlog",
+    # "modules.owner.profile_clone",  # file nahi hai — jab banao tab uncomment
+    # "modules.owner.spam",           # raid_spam ke saath duplicate — skip
+
     # VC
     "modules.vc.play",
     "modules.vc.controls",
+
     # Global mod
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
@@ -31,14 +37,17 @@ MODULES = [
     "modules.global_mod.welcome",
     "modules.global_mod.antilink",
     "modules.global_mod.antidelete",
+
     # Public
     "modules.public.login",
+
     # Bot UI / music / AI
     "modules.bot.start",
     "modules.bot.ai_chat",
     "modules.bot.stickers",
     "modules.bot.music",
     "modules.bot.logger",
+
     # Economy / games / fun
     "modules.economy.basic",
     "modules.games.couple",
@@ -48,6 +57,7 @@ MODULES = [
     "modules.games.chase",
     "modules.games.ludo",
     "modules.fun_family.actions",
+
     # Utils
     "modules.utils.basics",
     "modules.utils.info",
@@ -56,6 +66,8 @@ MODULES = [
     "modules.utils.protect",
     "modules.utils.notes",
     "modules.utils.voice",
+    "modules.utils.nuinfo",
+
     # Media
     "modules.media.kang",
     "modules.media.download",
