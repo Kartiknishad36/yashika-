@@ -1,7 +1,7 @@
 """
 YouTube / generic download (userbot):
   .ytmp3 <url|query>   — audio mp3
-  .ytmp4 <url|query>   — video mp4 (max \~50MB try)
+  .ytmp4 <url|query>   — video mp4 (max ~50MB try)
   .dl <url>            — best effort video
 
 Uses yt-dlp + optional cookies.txt (COOKIES_PATH from config).
@@ -18,7 +18,7 @@ from config import COOKIES_PATH
 from modules.owner.sudoers import sudo_only
 
 PREFIXES = [".", "!"]
-MAX_UPLOAD = 45 * 1024 * 1024  # \~45MB soft limit for TG
+MAX_UPLOAD = 45 * 1024 * 1024  # ~45MB soft limit for TG
 
 
 def _cookies():
