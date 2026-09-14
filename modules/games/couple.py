@@ -36,6 +36,6 @@ async def couple_cmd(client, message: Message):
         f"❤️ <b>Tᴏᴅᴀʏꜱ Cᴜᴛᴇ Cᴏᴜᴘʟᴇ</b> ❤️\n\n"
         f"{a.mention} 🩵 💞 {b.mention}\n\n"
         f"Lᴏᴠᴇ Iꜱ Iɴ Tʜᴇ Aɪʀ ❤️\n"
-        f"\~ Fʀᴏᴍ {BOT_NAME.upper()} Wɪᴛʜ Lᴏᴠᴇ 💋"
+        f"~ Fʀᴏᴍ {BOT_NAME.upper()} Wɪᴛʜ Lᴏᴠᴇ 💋"
     )
     await message.reply_text(text)
