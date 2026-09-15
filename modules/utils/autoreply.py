@@ -32,7 +32,7 @@ async def autoreply_cmd(client, message: Message):
         COOLDOWN = max(5, int(message.command[2]))
         return await message.reply_text(f"Cooldown `{COOLDOWN}s`")
 
-@app.on_message(filters.private & filters.incoming & ~filters.me & ~filters.bot & \~filters.service, group=17)
+@app.on_message(filters.private & filters.incoming & ~filters.me & ~filters.bot & ~filters.service, group=17)
 async def auto_replier(client, message: Message):
     if not AUTOREPLY_ON or not message.from_user:
         return
