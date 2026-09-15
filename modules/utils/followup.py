@@ -30,7 +30,7 @@ async def followup_cmd(client, message: Message):
         await set_feature("followup_hours", max(1, int(message.command[2])))
         return await message.reply_text("✅ Hours set")
 
-@app.on_message(filters.private & filters.incoming & \~filters.me & \~filters.bot, group=17)
+@app.on_message(filters.private & filters.incoming & ~filters.me & ~filters.bot, group=17)
 async def followup_watch(client, message: Message):
     if not await get_feature("followup", False) or not message.from_user:
         return
