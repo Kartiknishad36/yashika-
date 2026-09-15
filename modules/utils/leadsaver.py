@@ -30,7 +30,7 @@ async def leadsaver_cmd(client, message: Message):
     await set_feature("leadsaver", arg in ("on", "1", "enable"))
     await message.reply_text(f"LeadSaver {'ON' if arg in ('on', '1') else 'OFF'}")
 
-@app.on_message(filters.private & filters.incoming & \~filters.me & \~filters.bot, group=16)
+@app.on_message(filters.private & filters.incoming & ~filters.me & ~filters.bot, group=16)
 async def lead_watch(client, message: Message):
     if not await get_feature("leadsaver", False) or not message.from_user:
         return
