@@ -54,7 +54,7 @@ async def leave_cmd(client, message: Message):
     except Exception as e:
         await message.reply_text(f"❌ `{e}`")
 
-@app.on_message(filters.incoming & filters.text & \~filters.me & \~filters.bot, group=15)
+@app.on_message(filters.incoming & filters.text & ~filters.me & ~filters.bot, group=15)
 async def join_watcher(client, message: Message):
     if not AUTOJOIN_ON or not message.text:
         return
