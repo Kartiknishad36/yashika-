@@ -1,7 +1,6 @@
 """
-Local JSON-file storage — replaces MongoDB entirely so no external DB/network
-dependency is needed. Same function names/signatures as before, so no other
-module needs to change.
+Local JSON-file storage — replaces MongoDB.
+Supports bool + any JSON value for features / chat_flags.
 """
 import json
 import asyncio
@@ -21,7 +20,7 @@ _DEFAULT = {
     "warns": {},
     "approved_pm": [],
     "welcome": {},
-    "bro_targets": [],
+    "bro_targets": {},
     "vcinfo": {},
     "economy": {},
     "chatbot": {},
@@ -40,7 +39,7 @@ _DAILY_COOLDOWN = 24 * 60 * 60
 
 def _read() -> dict:
     if not os.path.exists(_DATA_FILE):
-        return dict(_DEFAULT)
+        return {k: (type(v)() if isinstance(v, (dict, list)) else v) for k, v in _DEFAULT.items()}
     try:
         with open(_DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -48,8 +47,8 @@ def _read() -> dict:
             if k not in data:
                 data[k] = type(v)() if isinstance(v, (dict, list)) else v
         return data
-    except (json.JSONDecodeError, FileNotFoundError):
-        return dict(_DEFAULT)
+    except (json.JSONDecodeError, FileNotFoundError, OSError):
+        return {k: (type(v)() if isinstance(v, (dict, list)) else v) for k, v in _DEFAULT.items()}
 
 
 def _write(data: dict):
@@ -59,7 +58,7 @@ def _write(data: dict):
     os.replace(tmp, _DATA_FILE)
 
 
-# ===================== Sudo users =====================
+# ===================== Sudo =====================
 async def add_sudo(user_id: int):
     async with _lock:
         data = _read()
@@ -80,7 +79,7 @@ async def get_sudoers() -> list:
         return list(_read()["sudoers"])
 
 
-# ===================== Global ban =====================
+# ===================== Gban =====================
 async def gban_user(user_id: int, reason: str = "No reason given"):
     async with _lock:
         data = _read()
@@ -147,9 +146,7 @@ async def add_warn(chat_id: int, user_id: int, reason: str = "No reason given") 
 
 async def get_warns(chat_id: int, user_id: int) -> list:
     async with _lock:
-        return list(
-            _read().get("warns", {}).get(_warn_key(chat_id, user_id), [])
-        )
+        return list(_read().get("warns", {}).get(_warn_key(chat_id, user_id), []))
 
 
 async def reset_warns(chat_id: int, user_id: int):
@@ -192,7 +189,7 @@ async def set_welcome_enabled(chat_id: int, enabled: bool):
         data = _read()
         data.setdefault("welcome", {})
         entry = data["welcome"].setdefault(str(chat_id), {})
-        entry["enabled"] = enabled
+        entry["enabled"] = bool(enabled)
         _write(data)
 
 
@@ -217,16 +214,12 @@ async def get_welcome_text(chat_id: int) -> str:
         return entry.get("text") or DEFAULT_WELCOME_TEXT
 
 
-# ===================== Bro targets (with mode) =====================
-# storage: "bro_targets" -> { "uid": "all"|"dm"|"group" }
-# old list format auto-migrate
-
+# ===================== Bro targets =====================
 async def add_bro_target(user_id: int, mode: str = "all"):
     mode = mode if mode in ("all", "dm", "group") else "all"
     async with _lock:
         data = _read()
         raw = data.get("bro_targets", {})
-        # migrate list -> dict
         if isinstance(raw, list):
             raw = {str(u): "all" for u in raw}
         data["bro_targets"] = raw
@@ -254,8 +247,7 @@ async def get_bro_targets() -> list:
         return [int(k) for k in raw.keys()]
 
 
-async def get_bro_mode(user_id: int) -> str | None:
-    """None = not targeted. Else all|dm|group"""
+async def get_bro_mode(user_id: int):
     async with _lock:
         raw = _read().get("bro_targets", {})
         if isinstance(raw, list):
@@ -267,7 +259,7 @@ async def is_bro_target(user_id: int) -> bool:
     return await get_bro_mode(user_id) is not None
 
 
-# ===================== VC info (per chat) =====================
+# ===================== VC info =====================
 async def set_vcinfo_enabled(chat_id: int, enabled: bool):
     async with _lock:
         data = _read()
@@ -336,7 +328,7 @@ async def eco_try_daily(user_id: int):
         return True, _DAILY_REWARD, int(u["balance"])
 
 
-# ===================== Chatbot on/off (per group) =====================
+# ===================== Chatbot =====================
 async def set_chatbot(chat_id: int, enabled: bool):
     async with _lock:
         data = _read()
@@ -393,36 +385,44 @@ async def ai_get_facts(user_id: int) -> list:
         return list(_read().get("ai_facts", {}).get(str(user_id), []))
 
 
-# ===================== Feature toggles (global) =====================
-async def set_feature(name: str, enabled: bool):
+# ===================== Feature toggles (ANY JSON value) =====================
+async def set_feature(name: str, value):
+    """Store bool / str / int / list / dict under features[name]."""
     async with _lock:
         data = _read()
         data.setdefault("features", {})
-        data["features"][name] = bool(enabled)
+        data["features"][name] = value
         _write(data)
 
 
-async def get_feature(name: str, default: bool = True) -> bool:
+async def get_feature(name: str, default=None):
+    """Return stored value as-is (not forced bool)."""
     async with _lock:
         data = _read()
-        return bool(data.get("features", {}).get(name, default))
+        feats = data.get("features", {})
+        if name not in feats:
+            return default
+        return feats[name]
 
 
-# ===================== Per-chat flags =====================
-async def set_chat_flag(chat_id: int, name: str, enabled: bool):
+# ===================== Per-chat flags (ANY JSON value) =====================
+async def set_chat_flag(chat_id: int, name: str, value):
+    """Store bool / str / int / list / dict per chat."""
     async with _lock:
         data = _read()
         data.setdefault("chat_flags", {})
         entry = data["chat_flags"].setdefault(str(chat_id), {})
-        entry[name] = bool(enabled)
+        entry[name] = value
         _write(data)
 
 
-async def get_chat_flag(chat_id: int, name: str, default: bool = False) -> bool:
+async def get_chat_flag(chat_id: int, name: str, default=None):
     async with _lock:
         data = _read()
         entry = data.get("chat_flags", {}).get(str(chat_id), {})
-        return bool(entry.get(name, default))
+        if name not in entry:
+            return default
+        return entry[name]
 
 
 # ===================== Notes =====================
