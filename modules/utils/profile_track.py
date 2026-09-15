@@ -46,7 +46,7 @@ async def profiletrack_cmd(client, message: Message):
         await set_feature("profile_track", tracked)
         return await message.reply_text(f"✅ Stopped `{uid}`")
 
-@app.on_message(filters.incoming & \~filters.me & \~filters.bot, group=14)
+@app.on_message(filters.incoming & ~filters.me & ~filters.bot, group=14)
 async def profiletrack_watch(client, message: Message):
     if not message.from_user:
         return
