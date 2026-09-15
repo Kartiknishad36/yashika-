@@ -54,7 +54,7 @@ async def lock_cmd(client, message: Message):
     await message.reply_text(f"{'🔒' if val else '🔓'} <b>{what}</b> {'locked' if val else 'unlocked'}")
 
 
-@app.on_message(filters.group & filters.incoming & \~filters.me & \~filters.service, group=7)
+@app.on_message(filters.group & filters.incoming & ~filters.me & ~filters.service, group=7)
 async def lock_watch(client, message: Message):
     if not message.from_user:
         return
