@@ -36,7 +36,7 @@ async def autokick_cmd(client, message: Message):
         await set_chat_flag(cid, "autokick_words", words)
         return await message.reply_text(f"✅ Removed `{w}`")
 
-@app.on_message(filters.group & filters.incoming & filters.text & \~filters.me, group=6)
+@app.on_message(filters.group & filters.incoming & filters.text & ~filters.me, group=6)
 async def autokick_watch(client, message: Message):
     if not message.from_user or not message.text:
         return
