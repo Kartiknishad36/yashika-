@@ -63,7 +63,7 @@ async def filter_cmd(client, message: Message):
     await message.reply_text("Usage: add / del / .filters")
 
 
-@app.on_message(filters.group & filters.incoming & filters.text & \~filters.me, group=9)
+@app.on_message(filters.group & filters.incoming & filters.text & ~filters.me, group=9)
 async def filter_watch(client, message: Message):
     if not message.text or not message.from_user:
         return
