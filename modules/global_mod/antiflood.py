@@ -57,7 +57,7 @@ async def antiflood_cmd(client, message: Message):
     await message.reply_text("Usage: <code>.antiflood on|off</code>")
 
 
-@app.on_message(filters.group & filters.incoming & ~filters.service & \~filters.me, group=8)
+@app.on_message(filters.group & filters.incoming & ~filters.service & ~filters.me, group=8)
 async def antiflood_watch(client, message: Message):
     if not message.from_user:
         return
