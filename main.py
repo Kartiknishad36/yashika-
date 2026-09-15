@@ -8,7 +8,7 @@ from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
 MODULES = [
-    # Owner / security
+    # ========== Owner / security ==========
     "modules.owner.sudoers",
     "modules.owner.pmguard",
     "modules.owner.pm_extra",
@@ -17,14 +17,15 @@ MODULES = [
     "modules.owner.raid_spam",
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
-    # "modules.owner.profile_clone",  # file nahi hai — jab banao tab uncomment
-    # "modules.owner.spam",           # raid_spam ke saath duplicate — skip
+    # "modules.owner.profile_clone",  # jab file ho tab
+    # "modules.owner.spam",           # raid_spam duplicate
+    # "modules.owner.ghost",          # agar ghost.py alag ho — ghostmod se ek hi
 
-    # VC
+    # ========== VC / Music ==========
     "modules.vc.play",
     "modules.vc.controls",
 
-    # Global mod
+    # ========== Global mod ==========
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
     "modules.global_mod.gdel",
@@ -37,18 +38,29 @@ MODULES = [
     "modules.global_mod.welcome",
     "modules.global_mod.antilink",
     "modules.global_mod.antidelete",
+    "modules.global_mod.antiflood",
+    "modules.global_mod.locks",
+    "modules.global_mod.rules",
+    "modules.global_mod.nightmode",
+    "modules.global_mod.slowmode",
+    "modules.global_mod.zombies",
+    "modules.global_mod.autokick",
+    "modules.global_mod.admin_extra",
 
-    # Public
+    # ========== Public ==========
     "modules.public.login",
+    # "modules.public.start",  # agar file hai
 
-    # Bot UI / music / AI
+    # ========== Bot UI / AI / music ==========
     "modules.bot.start",
     "modules.bot.ai_chat",
     "modules.bot.stickers",
     "modules.bot.music",
     "modules.bot.logger",
+    # "modules.bot.help_menu",
+    # "modules.bot.bot_commands",  # import in main after bot.start
 
-    # Economy / games / fun
+    # ========== Economy / games / fun ==========
     "modules.economy.basic",
     "modules.games.couple",
     "modules.games.dice",
@@ -58,7 +70,7 @@ MODULES = [
     "modules.games.ludo",
     "modules.fun_family.actions",
 
-    # Utils
+    # ========== Utils (core) ==========
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.fun",
@@ -68,7 +80,45 @@ MODULES = [
     "modules.utils.voice",
     "modules.utils.nuinfo",
 
-    # Media
+    # ========== Utils (extra packs) ==========
+    "modules.utils.system_cmds",
+    "modules.utils.tools",
+    "modules.utils.profile_set",
+    "modules.utils.fun_text",
+    "modules.utils.anims_pack",
+    "modules.utils.anims_basic",
+    "modules.utils.anims_more",
+    "modules.utils.flowers_pack",
+    "modules.utils.gf_bf",
+    "modules.utils.spy_pack",
+    "modules.utils.ultra_extra",
+    "modules.utils.intel",
+    "modules.utils.copy_tools",
+    "modules.utils.hashtag",
+    "modules.utils.profile_track",
+    "modules.utils.vanish",
+    "modules.utils.creator_tools",
+    "modules.utils.autoleave_inactive",
+    "modules.utils.fun_location",
+    "modules.utils.leadsaver",
+    "modules.utils.followup",
+    "modules.utils.idbackup",
+    "modules.utils.paste_cmd",
+    "modules.utils.reminder",
+    "modules.utils.filters_words",
+    "modules.utils.shayari_extra",
+    "modules.utils.qrcode_cmd",
+    "modules.utils.stats_cmd",
+    "modules.utils.setgroup",
+    "modules.utils.autobio",
+    "modules.utils.telegraph",
+    "modules.utils.autojoin",
+    "modules.utils.autoreply",
+    "modules.utils.gclone",
+    # "modules.utils.dark_spy",   # spy_pack ke saath duplicate — ek hi rakho
+    # "modules.utils.flowers",    # flowers_pack use karo
+
+    # ========== Media ==========
     "modules.media.kang",
     "modules.media.download",
     "modules.media.social",
@@ -97,7 +147,6 @@ async def main():
     await track_new_chats()
     register_trigger_autodelete(app)
 
-    # ---- Userbot ----
     try:
         await app.start()
         print("[Bot] Userbot client started.")
@@ -107,7 +156,6 @@ async def main():
 
     await asyncio.sleep(2)
 
-    # ---- Bot token ----
     if bot:
         try:
             await bot.start()
@@ -129,7 +177,6 @@ async def main():
 
     await asyncio.sleep(2)
 
-    # ---- Assistant ----
     if assistant:
         try:
             await assistant.start()
