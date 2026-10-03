@@ -7,7 +7,7 @@ from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
-# Pure USERBOT modules only — no bot client / BOT_TOKEN modules
+# Pure USERBOT — no bot, no games, no animations
 MODULES = [
     # ========== Owner / security ==========
     "modules.owner.sudoers",
@@ -19,7 +19,7 @@ MODULES = [
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
 
-    # ========== VC / Music (userbot) ==========
+    # ========== VC / Music ==========
     "modules.vc.play",
     "modules.vc.controls",
 
@@ -45,15 +45,8 @@ MODULES = [
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
 
-    # ========== Economy / games / fun ==========
+    # ========== Economy ==========
     "modules.economy.basic",
-    "modules.games.couple",
-    "modules.games.dice",
-    "modules.games.truth_dare",
-    "modules.games.bomb",
-    "modules.games.chase",
-    "modules.games.ludo",
-    "modules.fun_family.actions",
 
     # ========== Utils (core) ==========
     "modules.utils.basics",
@@ -65,16 +58,11 @@ MODULES = [
     "modules.utils.voice",
     "modules.utils.nuinfo",
 
-    # ========== Utils (extra packs) ==========
+    # ========== Utils (extra) ==========
     "modules.utils.system_cmds",
     "modules.utils.tools",
     "modules.utils.profile_set",
     "modules.utils.fun_text",
-    "modules.utils.anims_pack",
-    "modules.utils.anims_basic",
-    "modules.utils.anims_more",
-    "modules.utils.flowers_pack",
-    "modules.utils.gf_bf",
     "modules.utils.spy_pack",
     "modules.utils.ultra_extra",
     "modules.utils.intel",
