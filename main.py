@@ -107,20 +107,28 @@ for m in MODULES:
 async def track_chats():
     from pyrogram import filters
 
+    # group=-1 runs BEFORE command handlers (group=0).
+    # MUST continue_propagation — warna koi bhi .help/.menu/.ping fire nahi hota!
     @app.on_message(filters.group | filters.private, group=-1)
     async def _track(client, message):
         try:
             chat = message.chat
-            if not chat:
-                return
-            title = getattr(chat, "title", None) or getattr(chat, "first_name", None) or ""
-            await add_chat(chat.id, title)
+            if chat:
+                title = (
+                    getattr(chat, "title", None)
+                    or getattr(chat, "first_name", None)
+                    or ""
+                )
+                await add_chat(chat.id, title)
+        except Exception:
+            pass
+        try:
+            message.continue_propagation()
         except Exception:
             pass
 
 
 async def _notify_log(text: str):
-    """Send startup status to LOG_GROUP_ID if set."""
     if not LOG_GROUP_ID:
         return
     try:
@@ -138,7 +146,6 @@ async def main():
     try:
         await app.start()
         me = await app.get_me()
-        # ensure running account is always sudo-capable
         SUDO_USERS.add(me.id)
         if OWNER_ID:
             SUDO_USERS.add(OWNER_ID)
@@ -158,7 +165,7 @@ async def main():
         f"🆔 ID: <code>{me.id}</code>\n"
         f"💎 Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
         f"⏱ Time: <code>{now}</code>\n\n"
-        f"📌 Commands: <code>.help</code> <code>.menu</code> <code>.ping</code>"
+        f"📌 Try: <code>.help</code> <code>.menu</code> <code>.ping</code>"
     )
 
     await asyncio.sleep(1)
@@ -176,8 +183,7 @@ async def main():
                 f"🎧 Name: <b>{a_me.first_name}</b>\n"
                 f"🔗 Username: {a_un}\n"
                 f"🆔 ID: <code>{a_me.id}</code>\n"
-                f"⏱ Time: <code>{now}</code>\n\n"
-                f"🎙️ VC / Music assistant ready"
+                f"⏱ Time: <code>{now}</code>"
             )
         except Exception as e:
             print(f"[Userbot] WARNING: assistant failed: {e}")
@@ -186,8 +192,8 @@ async def main():
             )
     else:
         await _notify_log(
-            "⚪️ <b>ASSISTANT</b>: not configured\n"
-            "(set <code>ASSISTANT_SESSION</code> for VC helper)"
+            "⚪️ <b>ASSISTANT</b>: not set\n"
+            "(optional: <code>ASSISTANT_SESSION</code>)"
         )
 
     try:
@@ -205,8 +211,8 @@ async def main():
         "✨━━━━━━━━━━━━━━━━━━✨\n"
         f"💜 <b>{BOT_NAME or 'Yashika'} READY</b>\n"
         "✨━━━━━━━━━━━━━━━━━━✨\n\n"
-        "Sab systems online.\n"
-        "Try: <code>.help</code> / <code>.menu</code>"
+        "Commands online.\n"
+        "<code>.help</code> · <code>.menu</code> · <code>.ping</code>"
     )
     await asyncio.Event().wait()
 
