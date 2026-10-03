@@ -1,12 +1,13 @@
 import asyncio
 import importlib
 
-from core.clients import app, bot, assistant
+from core.clients import app, assistant
 from core.call_manager import ensure_started
 from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
+# Pure USERBOT modules only — no bot client / BOT_TOKEN modules
 MODULES = [
     # ========== Owner / security ==========
     "modules.owner.sudoers",
@@ -17,11 +18,8 @@ MODULES = [
     "modules.owner.raid_spam",
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
-    # "modules.owner.profile_clone",  # jab file ho tab
-    # "modules.owner.spam",           # raid_spam duplicate
-    # "modules.owner.ghost",          # agar ghost.py alag ho — ghostmod se ek hi
 
-    # ========== VC / Music ==========
+    # ========== VC / Music (userbot) ==========
     "modules.vc.play",
     "modules.vc.controls",
 
@@ -46,19 +44,6 @@ MODULES = [
     "modules.global_mod.zombies",
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
-
-    # ========== Public ==========
-    "modules.public.login",
-    # "modules.public.start",  # agar file hai
-
-    # ========== Bot UI / AI / music ==========
-    "modules.bot.start",
-    "modules.bot.ai_chat",
-    "modules.bot.stickers",
-    "modules.bot.music",
-    "modules.bot.logger",
-    # "modules.bot.help_menu",
-    # "modules.bot.bot_commands",  # import in main after bot.start
 
     # ========== Economy / games / fun ==========
     "modules.economy.basic",
@@ -115,8 +100,6 @@ MODULES = [
     "modules.utils.autojoin",
     "modules.utils.autoreply",
     "modules.utils.gclone",
-    # "modules.utils.dark_spy",   # spy_pack ke saath duplicate — ek hi rakho
-    # "modules.utils.flowers",    # flowers_pack use karo
 
     # ========== Media ==========
     "modules.media.kang",
@@ -128,7 +111,7 @@ for m in MODULES:
     try:
         importlib.import_module(m)
     except Exception as e:
-        print(f"[Bot] WARNING: could not load module '{m}': {type(e).__name__}: {e}")
+        print(f"[Userbot] WARNING: could not load '{m}': {type(e).__name__}: {e}")
 
 
 async def track_new_chats():
@@ -149,48 +132,29 @@ async def main():
 
     try:
         await app.start()
-        print("[Bot] Userbot client started.")
+        me = await app.get_me()
+        print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
     except Exception as e:
-        print(f"[Bot] FATAL: userbot start failed: {e}")
+        print(f"[Userbot] FATAL: start failed: {e}")
         raise
 
-    await asyncio.sleep(2)
-
-    if bot:
-        try:
-            await bot.start()
-            print("[Bot] Bot client started.")
-            try:
-                from modules.bot.bot_commands import setup_bot_commands
-                await setup_bot_commands()
-                print("[Bot] Bot commands registered.")
-            except Exception as e:
-                print(f"[Bot] WARNING: set_bot_commands failed: {e}")
-            try:
-                from modules.bot.logger import send_startup_logs
-                await send_startup_logs()
-                print("[Bot] Startup logs sent.")
-            except Exception as e:
-                print(f"[Bot] WARNING: startup logs failed: {e}")
-        except Exception as e:
-            print(f"[Bot] WARNING: bot start failed: {e}")
-
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
 
     if assistant:
         try:
             await assistant.start()
-            print("[Bot] Assistant client started.")
+            a_me = await assistant.get_me()
+            print(f"[Userbot] Assistant started as {a_me.first_name} (@{a_me.username or a_me.id})")
         except Exception as e:
-            print(f"[Bot] WARNING: assistant start failed: {e}")
+            print(f"[Userbot] WARNING: assistant start failed: {e}")
 
     try:
         await ensure_started(app)
-        print("[Bot] PyTgCalls started.")
+        print("[Userbot] PyTgCalls started.")
     except Exception as e:
-        print(f"[Bot] WARNING: PyTgCalls failed: {e}")
+        print(f"[Userbot] WARNING: PyTgCalls failed: {e}")
 
-    print("[Bot] Bot is ready.")
+    print("[Userbot] Ready. All commands run on user account.")
     await asyncio.Event().wait()
 
 
