@@ -49,9 +49,9 @@ GEMINI_MODEL = _str("GEMINI_MODEL", "gemini-2.5-flash")
 # ===================== Identity / links =====================
 BOT_NAME = _str("BOT_NAME", "Yashika")
 BOT_USERNAME = _str("BOT_USERNAME", "").lstrip("@")
-OWNER_USERNAME = _str("OWNER_USERNAME", "").lstrip("@")
-SUPPORT_CHAT = _str("SUPPORT_CHAT", "https://t.me/YourSupport")
-UPDATE_CHANNEL = _str("UPDATE_CHANNEL", "https://t.me/YourUpdates")
+OWNER_USERNAME = _str("OWNER_USERNAME", "KARTIK_NISHAD_3").lstrip("@")
+SUPPORT_CHAT = _str("SUPPORT_CHAT", "https://t.me/+Ml99kT7JCMo0OTdl")
+UPDATE_CHANNEL = _str("UPDATE_CHANNEL", "https://t.me/ye_duniya_ek_sapna_he")
 
 START_PIC = _str("START_PIC", "assets/start.jpg")
 PING_PIC = _str("PING_PIC", "assets/ping.jpg")
