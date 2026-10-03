@@ -21,6 +21,7 @@ MODULES = [
     # VC / Music
     "modules.vc.play",
     "modules.vc.controls",
+    "modules.utils.vc_welcome",
 
     # Global mod
     "modules.global_mod.gban",
