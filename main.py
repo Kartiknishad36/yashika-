@@ -51,6 +51,7 @@ MODULES = [
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.user_scan",
+    "modules.utils.mongo_dp",
     "modules.utils.fun",
     "modules.utils.afk",
     "modules.utils.protect",
