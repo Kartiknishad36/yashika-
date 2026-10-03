@@ -2,13 +2,13 @@ import sys
 from pyrogram import Client
 from pyrogram.enums import ParseMode
 
-from config import API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, ASSISTANT_SESSION
+from config import API_ID, API_HASH, STRING_SESSION, ASSISTANT_SESSION
 
 if not STRING_SESSION:
     print("[FATAL] STRING_SESSION missing in .env — userbot cannot start.")
     sys.exit(1)
 
-# Main userbot client (personal account, drives all userbot commands)
+# Main userbot client (personal account — all commands run here)
 app = Client(
     name="userbot-session",
     api_id=API_ID,
@@ -18,21 +18,7 @@ app = Client(
     in_memory=True,
 )
 
-# Helper bot client — used for the self-service .login/.clone flow, so that
-# flow never touches the main personal account.
-bot = None
-if BOT_TOKEN:
-    bot = Client(
-        name="userbot-bot",
-        api_id=API_ID,
-        api_hash=API_HASH,
-        bot_token=BOT_TOKEN,
-        parse_mode=ParseMode.HTML,
-        in_memory=True,
-    )
-
-# Assistant client (optional 2nd account dedicated to joining VCs, avoids
-# tying up the main account in every call — falls back to `app` if absent)
+# Optional assistant (2nd account for VC — avoids tying main account to every call)
 assistant = None
 if ASSISTANT_SESSION:
     assistant = Client(
@@ -43,5 +29,8 @@ if ASSISTANT_SESSION:
         in_memory=True,
     )
 
-# The client PyTgCalls actually joins voice chats with
+# Client used by PyTgCalls for voice chats
 call_client = assistant if assistant else app
+
+# Back-compat: some old modules may still import `bot` — always None (pure userbot)
+bot = None
