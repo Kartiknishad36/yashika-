@@ -17,6 +17,7 @@ SUDO_USERS: set = {OWNER_ID} if OWNER_ID else set()
 
 
 async def load_sudoers():
+    """Load sudo list from DB. Call get_me only AFTER app.start (in main)."""
     SUDO_USERS.clear()
     if OWNER_ID:
         SUDO_USERS.add(OWNER_ID)
@@ -25,19 +26,12 @@ async def load_sudoers():
             SUDO_USERS.add(uid)
     except Exception:
         pass
-    # always treat the running account as allowed once we know id
-    try:
-        me = await app.get_me()
-        if me:
-            SUDO_USERS.add(me.id)
-    except Exception:
-        pass
 
 
 def sudo_only(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
-        # Own account commands (userbot types .help) = always allow
+        # Userbot own account command (.help etc) — always allow
         if getattr(message, "outgoing", False):
             return await func(client, message, *args, **kwargs)
 
