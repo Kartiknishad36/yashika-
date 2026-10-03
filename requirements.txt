@@ -4,24 +4,14 @@ tgcrypto==1.2.5
 python-dotenv==1.2.2
 py-tgcalls==2.3.3
 
-# ===== HTTP / download =====
+# ===== HTTP / download / YouTube =====
 requests==2.33.1
 aiohttp==3.13.2
 httpx==0.27.2
 yt-dlp
 youtube-search-python==1.6.6
 
-# ===== AI =====
-google-generativeai
-
-# ===== Voice =====
-gTTS
-SpeechRecognition
-
 # ===== Utils =====
-phonenumbers
 qrcode[pil]
 Pillow
-
-# Optional (agar logo/fonts local use karo)
-# numpy
+phonenumbers
