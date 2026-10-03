@@ -1,11 +1,13 @@
 import asyncio
 import importlib
+from datetime import datetime, timezone
 
 from core.clients import app, assistant
 from core.call_manager import ensure_started
 from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
-from modules.owner.sudoers import load_sudoers
+from modules.owner.sudoers import load_sudoers, SUDO_USERS
+from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 
 MODULES = [
     # Owner / security
@@ -117,18 +119,47 @@ async def track_chats():
             pass
 
 
+async def _notify_log(text: str):
+    """Send startup status to LOG_GROUP_ID if set."""
+    if not LOG_GROUP_ID:
+        return
+    try:
+        await app.send_message(LOG_GROUP_ID, text)
+    except Exception as e:
+        print(f"[Userbot] LOG_GROUP notify failed: {e}")
+
+
 async def main():
     await load_sudoers()
     await track_chats()
     register_trigger_autodelete(app)
 
+    me = None
     try:
         await app.start()
         me = await app.get_me()
+        # ensure running account is always sudo-capable
+        SUDO_USERS.add(me.id)
+        if OWNER_ID:
+            SUDO_USERS.add(OWNER_ID)
         print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
     except Exception as e:
         print(f"[Userbot] FATAL: start failed: {e}")
         raise
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    uname = f"@{me.username}" if me.username else "—"
+    await _notify_log(
+        "🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n"
+        f"✅ <b>USERBOT STARTED</b>\n"
+        "🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n\n"
+        f"👑 Name: <b>{me.first_name}</b>\n"
+        f"🔗 Username: {uname}\n"
+        f"🆔 ID: <code>{me.id}</code>\n"
+        f"💎 Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
+        f"⏱ Time: <code>{now}</code>\n\n"
+        f"📌 Commands: <code>.help</code> <code>.menu</code> <code>.ping</code>"
+    )
 
     await asyncio.sleep(1)
 
@@ -137,16 +168,46 @@ async def main():
             await assistant.start()
             a_me = await assistant.get_me()
             print(f"[Userbot] Assistant: {a_me.first_name} (@{a_me.username or a_me.id})")
+            a_un = f"@{a_me.username}" if a_me.username else "—"
+            await _notify_log(
+                "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n"
+                f"✅ <b>ASSISTANT STARTED</b>\n"
+                "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n\n"
+                f"🎧 Name: <b>{a_me.first_name}</b>\n"
+                f"🔗 Username: {a_un}\n"
+                f"🆔 ID: <code>{a_me.id}</code>\n"
+                f"⏱ Time: <code>{now}</code>\n\n"
+                f"🎙️ VC / Music assistant ready"
+            )
         except Exception as e:
             print(f"[Userbot] WARNING: assistant failed: {e}")
+            await _notify_log(
+                f"⚠️ <b>ASSISTANT FAILED</b>\n<code>{type(e).__name__}: {e}</code>"
+            )
+    else:
+        await _notify_log(
+            "⚪️ <b>ASSISTANT</b>: not configured\n"
+            "(set <code>ASSISTANT_SESSION</code> for VC helper)"
+        )
 
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls started.")
+        await _notify_log("🎵 <b>PyTgCalls</b> · VC engine ready")
     except Exception as e:
         print(f"[Userbot] WARNING: PyTgCalls failed: {e}")
+        await _notify_log(
+            f"⚠️ <b>PyTgCalls failed</b>\n<code>{type(e).__name__}: {e}</code>"
+        )
 
     print("[Userbot] Ready.")
+    await _notify_log(
+        "✨━━━━━━━━━━━━━━━━━━✨\n"
+        f"💜 <b>{BOT_NAME or 'Yashika'} READY</b>\n"
+        "✨━━━━━━━━━━━━━━━━━━✨\n\n"
+        "Sab systems online.\n"
+        "Try: <code>.help</code> / <code>.menu</code>"
+    )
     await asyncio.Event().wait()
 
 
