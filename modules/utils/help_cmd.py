@@ -47,42 +47,34 @@ def _channel() -> str:
     return UPDATE_CHANNEL or "https://t.me/ye_duniya_ek_sapna_he"
 
 
-# ═══════════════════════ MAIN MENU (full colour board) ═══════════════════════
 def main_buttons() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            # Row 1
             [
                 InlineKeyboardButton("🟢🟢 🎵 MUSIC 🟢🟢", callback_data="yh:vc"),
                 InlineKeyboardButton("🔴🔴 👮 MOD 🔴🔴", callback_data="yh:mod"),
             ],
-            # Row 2
             [
                 InlineKeyboardButton("🟣🟣 🕵️ SCAN 🟣🟣", callback_data="yh:scan"),
                 InlineKeyboardButton("🟡🟡 📢 CAST 🟡🟡", callback_data="yh:cast"),
             ],
-            # Row 3
             [
                 InlineKeyboardButton("🩷🩷 💕 BRO 🩷🩷", callback_data="yh:bro"),
                 InlineKeyboardButton("🩵🩵 👑 OWNER 🩵🩵", callback_data="yh:owner"),
             ],
-            # Row 4
             [
                 InlineKeyboardButton("🧡🧡 🛡 PM 🧡🧡", callback_data="yh:pm"),
                 InlineKeyboardButton("💚💚 💰 ECO 💚💚", callback_data="yh:eco"),
             ],
-            # Row 5
             [
                 InlineKeyboardButton("🔵🔵 🛠 TOOLS 🔵🔵", callback_data="yh:tools"),
                 InlineKeyboardButton("⚪️⚪️ ⚙️ SYSTEM ⚪️⚪️", callback_data="yh:system"),
             ],
-            # Deploy full width
             [
                 InlineKeyboardButton(
                     "🚀🚀🚀  DEPLOY ANYWHERE  🚀🚀🚀", callback_data="yh:deploy"
                 )
             ],
-            # Links
             [
                 InlineKeyboardButton("💬💚 SUPPORT", url=_support()),
                 InlineKeyboardButton("📢🩵 CHANNEL", url=_channel()),
@@ -91,7 +83,6 @@ def main_buttons() -> InlineKeyboardMarkup:
                 InlineKeyboardButton("👤👑 OWNER", url=_owner_url()),
                 InlineKeyboardButton("📦🟡 SOURCE", url=REPO_URL),
             ],
-            # Close
             [
                 InlineKeyboardButton(
                     "❌❌  CLOSE MENU  ❌❌", callback_data="yh:close"
@@ -153,7 +144,6 @@ def deploy_buttons() -> InlineKeyboardMarkup:
     )
 
 
-# ═══════════════════════ HOME CAPTION (full colour text) ═══════════════════════
 HOME_CAPTION = (
     f"╔══════════════════════╗\n"
     f"║  👑 <b>{BOT_NAME or 'YASHIKA'}</b> 👑  ║\n"
@@ -174,7 +164,6 @@ HOME_CAPTION = (
 )
 
 
-# ═══════════════════════ CATEGORY PAGES (each colour themed) ═══════════════════════
 HELP_DATA = {
     "vc": (
         "🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n"
@@ -205,7 +194,7 @@ HELP_DATA = {
     ),
     "scan": (
         "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n"
-        "🕵️ <b>USER SCAN</b>\n"
+        "🕵️ <b>USER SCAN + MONGO DP</b>\n"
         "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n\n"
         "🟣 <code>.uinfo</code> / <code>.scan</code> — full report\n"
         "🟣 <code>.dphist</code> — profile photos\n"
@@ -214,7 +203,12 @@ HELP_DATA = {
         "🟣 <code>.commonlist</code> — mutual groups\n"
         "🟣 <code>.whois</code> · <code>.spy</code>\n"
         "🟣 <code>.mutual</code> · <code>.picspy</code>\n\n"
-        "💜 <i>Real API · common chats + activity</i>"
+        "🥭 <b>MONGO DP</b>\n"
+        "🟣 <code>.dp</code> / <code>.mongodp</code> — saari DPs bhejo\n"
+        "🟣 <code>.dpsave</code> — DP file_id DB me save\n"
+        "🟣 <code>.dplog</code> — live + stored history\n"
+        "🟣 <code>.dpclear</code> — stored DP clear\n\n"
+        "💜 <i>Real API · auto-track new DP</i>"
     ),
     "cast": (
         "🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡\n"
@@ -304,7 +298,6 @@ HELP_DATA = {
     ),
 }
 
-# colour used for back button per page
 PAGE_COLOR = {
     "vc": "🟢",
     "mod": "🔴",
