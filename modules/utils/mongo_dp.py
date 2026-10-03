@@ -7,14 +7,13 @@
   .dpclear                   → reply/user → us user ki saved DP list clear
 
 Storage: database/mongo.py (storage.json) → key "mongo_dp"
-Telegram API se live photos + local tracked file_ids.
+NOTE: Auto-track on every message DISABLED (photos.GetUserPhotos flood).
 """
 import asyncio
 from datetime import datetime, timezone
 
 from pyrogram import filters
 from pyrogram.types import Message
-from pyrogram.enums import MessageMediaType
 
 from core.clients import app
 from modules.owner.sudoers import sudo_only
@@ -42,7 +41,6 @@ async def _resolve_user(client, message: Message):
 
 
 async def _collect_photos(client, user_id: int, limit: int = 50):
-    """Live Telegram profile photos (newest first)."""
     photos = []
     try:
         async for p in client.get_chat_photos(user_id, limit=limit):
@@ -60,7 +58,6 @@ async def _dp_store_get(user_id: int) -> list:
 
 
 async def _dp_store_add(user_id: int, entries: list):
-    """entries: list of {file_id, unique_id, date, w, h}"""
     async with _lock:
         data = _read()
         data.setdefault("mongo_dp", {})
@@ -72,7 +69,7 @@ async def _dp_store_add(user_id: int, entries: list):
             if uid and uid not in seen:
                 existing.append(e)
                 seen.add(uid)
-        data["mongo_dp"][key] = existing[-100:]  # keep last 100
+        data["mongo_dp"][key] = existing[-100:]
         _write(data)
 
 
@@ -85,10 +82,8 @@ async def _dp_store_clear(user_id: int):
 
 
 def _photo_entry(photo) -> dict:
-    """Pyrogram ChatPhoto / Photo → dict."""
     file_id = getattr(photo, "file_id", None)
     unique = getattr(photo, "file_unique_id", None)
-    # sizes list on Photo
     w = h = None
     if getattr(photo, "sizes", None):
         best = photo.sizes[-1]
@@ -107,7 +102,6 @@ def _photo_entry(photo) -> dict:
     }
 
 
-# ───────────────────── .dp / .mongodp ─────────────────────
 @app.on_message(cmd("dp", "mongodp", "getdp", "mdp"))
 @sudo_only
 async def mongo_dp_cmd(client, message: Message):
@@ -130,7 +124,6 @@ async def mongo_dp_cmd(client, message: Message):
         )
         return
 
-    # save to local mongo_dp store
     entries = [_photo_entry(p) for p in photos]
     await _dp_store_add(user.id, entries)
 
@@ -157,7 +150,6 @@ async def mongo_dp_cmd(client, message: Message):
             await asyncio.sleep(0.35)
         except Exception:
             try:
-                # fallback: download-less send via file_id on sizes
                 if getattr(p, "sizes", None):
                     await client.send_photo(
                         message.chat.id,
@@ -177,7 +169,6 @@ async def mongo_dp_cmd(client, message: Message):
     )
 
 
-# ───────────────────── .dpsave ─────────────────────
 @app.on_message(cmd("dpsave", "savedp", "mongosave"))
 @sudo_only
 async def dp_save_cmd(client, message: Message):
@@ -203,7 +194,6 @@ async def dp_save_cmd(client, message: Message):
     )
 
 
-# ───────────────────── .dplog ─────────────────────
 @app.on_message(cmd("dplog", "dphistory", "mongolog"))
 @sudo_only
 async def dp_log_cmd(client, message: Message):
@@ -249,7 +239,6 @@ async def dp_log_cmd(client, message: Message):
     await message.reply_text("\n".join(lines))
 
 
-# ───────────────────── .dpclear ─────────────────────
 @app.on_message(cmd("dpclear", "cleardp"))
 @sudo_only
 async def dp_clear_cmd(client, message: Message):
@@ -261,34 +250,3 @@ async def dp_clear_cmd(client, message: Message):
     await message.reply_text(
         f"🗑 Mongo DP store cleared for {user.mention}"
     )
-
-
-# ───────────────────── auto-track on new photo (optional light) ─────────────────────
-@app.on_message(
-    filters.incoming & ~filters.me & ~filters.bot & ~filters.service,
-    group=13,
-)
-async def _dp_auto_hint(client, message: Message):
-    """
-    Jab user message kare to current DP unique_id track karo
-    (photo change detect ke liye).
-    """
-    if not message.from_user:
-        return
-    try:
-        uid = message.from_user.id
-        photos = []
-        async for p in client.get_chat_photos(uid, limit=1):
-            photos.append(p)
-            break
-        if not photos:
-            return
-        entry = _photo_entry(photos[0])
-        if not entry.get("unique_id"):
-            return
-        stored = await _dp_store_get(uid)
-        ids = {e.get("unique_id") for e in stored}
-        if entry["unique_id"] not in ids:
-            await _dp_store_add(uid, [entry])
-    except Exception:
-        pass
