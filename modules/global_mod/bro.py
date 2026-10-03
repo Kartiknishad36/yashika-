@@ -1,9 +1,6 @@
 """
-.bro / .broall   → reply user → auto-reply DM + GROUP
-.brodm           → only DM
-.brogroup        → only GROUP
-.unbro / .bro off → disable
-.brolist
+.bro / .broall → DM+GROUP | .brodm | .brogroup | .unbro | .brolist
+Lines: modules/global_mod/bro_part_*.json (200+)
 """
 import json
 import random
@@ -24,13 +21,32 @@ from database.mongo import (
 
 PREFIXES = [".", "!"]
 
-_LINES_FILE = Path(__file__).with_name("bro_lines.json")
-try:
-    BRO_LINES = json.loads(_LINES_FILE.read_text(encoding="utf-8"))
-    if not isinstance(BRO_LINES, list) or not BRO_LINES:
-        raise ValueError("empty")
-except Exception:
-    BRO_LINES = ["𝗧𝗘𝗥𝗜 𝗠𝗔́𝗔̀ 𝗞𝗜 𝗖𝗛𝗨𝗨́𝗧 𝗠𝗘 𝗚𝗛𝗨𝗧𝗞𝗔 𝗞𝗛𝗔𝗔𝗞𝗘 𝗧𝗛𝗢𝗢𝗞 𝗗𝗨𝗡𝗚𝗔 🤣🤣"]
+
+def _load_lines() -> list:
+    folder = Path(__file__).parent
+    out = []
+    for p in sorted(folder.glob("bro_part_*.json")):
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+            if isinstance(data, list):
+                out.extend(data)
+        except Exception:
+            pass
+    if not out:
+        single = folder / "bro_lines.json"
+        if single.exists():
+            try:
+                data = json.loads(single.read_text(encoding="utf-8"))
+                if isinstance(data, list):
+                    out = data
+            except Exception:
+                pass
+    if not out:
+        out = ["𝗧𝗘𝗥𝗜 𝗠𝗔́𝗔̀ 𝗞𝗜 𝗖𝗛𝗨𝗨́𝗧 𝗠𝗘 𝗚𝗛𝗨𝗧𝗞𝗔 𝗞𝗛𝗔𝗔𝗞𝗘 𝗧𝗛𝗢𝗢𝗞 𝗗𝗨𝗡𝗚𝗔 🤣🤣"]
+    return out
+
+
+BRO_LINES = _load_lines()
 
 
 def cmd(*names):
@@ -66,7 +82,8 @@ async def _enable(client, message: Message, mode: str):
     await add_bro_target(tid, mode)
     label = {"all": "DM + GROUP", "dm": "sirf DM", "group": "sirf GROUP"}.get(mode, mode)
     await message.reply_text(
-        f"✅ Auto-Reply <b>ON</b> ({label})\nTarget: {mention}\nID: <code>{tid}</code>"
+        f"✅ Auto-Reply <b>ON</b> ({label})\nTarget: {mention}\nID: <code>{tid}</code>\n"
+        f"Lines loaded: <code>{len(BRO_LINES)}</code>"
     )
 
 
@@ -118,7 +135,9 @@ async def brolist_cmd(client, message: Message):
     for uid in targets:
         mode = await get_bro_mode(uid) or "?"
         lines.append(f"• <code>{uid}</code> — <b>{mode}</b>")
-    await message.reply_text("💕 <b>Bro list</b>\n\n" + "\n".join(lines))
+    await message.reply_text(
+        f"💕 <b>Bro list</b> (lines pool: {len(BRO_LINES)})\n\n" + "\n".join(lines)
+    )
 
 
 @app.on_message(
