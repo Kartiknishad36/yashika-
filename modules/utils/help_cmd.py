@@ -1,7 +1,7 @@
 """
-👑 YASHIKA COMMAND CENTER — Premium Help Menu
-Photo + coloured emoji buttons + categories
-Works on Railway / Render / Heroku / VPS / local
+👑 YASHIKA — FULL PREMIUM COLOUR HELP MENU
+Har button colour emoji · har page colour theme
+.help / .menu / .cmds
 """
 from pyrogram import filters
 from pyrogram.types import (
@@ -29,7 +29,6 @@ RENDER_URL = "https://dashboard.render.com/select-repo?type=web"
 HEROKU_URL = "https://dashboard.heroku.com/new?template=" + REPO_URL
 KOYEB_URL = "https://app.koyeb.com/deploy"
 
-# Premium dark banner (Telegram-compatible public URL)
 HELP_BANNER = (
     "https://images.unsplash.com/photo-1614850523459-c2f4e146661a?w=900&q=80"
 )
@@ -48,52 +47,78 @@ def _channel() -> str:
     return UPDATE_CHANNEL or "https://t.me/ye_duniya_ek_sapna_he"
 
 
+# ═══════════════════════ MAIN MENU (full colour board) ═══════════════════════
 def main_buttons() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
+            # Row 1
             [
-                InlineKeyboardButton("🟢 🎵 MUSIC", callback_data="yh:vc"),
-                InlineKeyboardButton("🔴 👮 MOD", callback_data="yh:mod"),
+                InlineKeyboardButton("🟢🟢 🎵 MUSIC 🟢🟢", callback_data="yh:vc"),
+                InlineKeyboardButton("🔴🔴 👮 MOD 🔴🔴", callback_data="yh:mod"),
+            ],
+            # Row 2
+            [
+                InlineKeyboardButton("🟣🟣 🕵️ SCAN 🟣🟣", callback_data="yh:scan"),
+                InlineKeyboardButton("🟡🟡 📢 CAST 🟡🟡", callback_data="yh:cast"),
+            ],
+            # Row 3
+            [
+                InlineKeyboardButton("🩷🩷 💕 BRO 🩷🩷", callback_data="yh:bro"),
+                InlineKeyboardButton("🩵🩵 👑 OWNER 🩵🩵", callback_data="yh:owner"),
+            ],
+            # Row 4
+            [
+                InlineKeyboardButton("🧡🧡 🛡 PM 🧡🧡", callback_data="yh:pm"),
+                InlineKeyboardButton("💚💚 💰 ECO 💚💚", callback_data="yh:eco"),
+            ],
+            # Row 5
+            [
+                InlineKeyboardButton("🔵🔵 🛠 TOOLS 🔵🔵", callback_data="yh:tools"),
+                InlineKeyboardButton("⚪️⚪️ ⚙️ SYSTEM ⚪️⚪️", callback_data="yh:system"),
+            ],
+            # Deploy full width
+            [
+                InlineKeyboardButton(
+                    "🚀🚀🚀  DEPLOY ANYWHERE  🚀🚀🚀", callback_data="yh:deploy"
+                )
+            ],
+            # Links
+            [
+                InlineKeyboardButton("💬💚 SUPPORT", url=_support()),
+                InlineKeyboardButton("📢🩵 CHANNEL", url=_channel()),
             ],
             [
-                InlineKeyboardButton("🟣 🕵️ SCAN", callback_data="yh:scan"),
-                InlineKeyboardButton("🟡 📢 CAST", callback_data="yh:cast"),
+                InlineKeyboardButton("👤👑 OWNER", url=_owner_url()),
+                InlineKeyboardButton("📦🟡 SOURCE", url=REPO_URL),
             ],
+            # Close
             [
-                InlineKeyboardButton("🩷 💕 BRO", callback_data="yh:bro"),
-                InlineKeyboardButton("🩵 👑 OWNER", callback_data="yh:owner"),
+                InlineKeyboardButton(
+                    "❌❌  CLOSE MENU  ❌❌", callback_data="yh:close"
+                )
             ],
-            [
-                InlineKeyboardButton("🧡 🛡 PM", callback_data="yh:pm"),
-                InlineKeyboardButton("💚 💰 ECO", callback_data="yh:eco"),
-            ],
-            [
-                InlineKeyboardButton("🔵 🛠 TOOLS", callback_data="yh:tools"),
-                InlineKeyboardButton("⚪ ⚙️ SYSTEM", callback_data="yh:system"),
-            ],
-            [InlineKeyboardButton("🚀 DEPLOY", callback_data="yh:deploy")],
-            [
-                InlineKeyboardButton("💬 Support", url=_support()),
-                InlineKeyboardButton("📢 Channel", url=_channel()),
-            ],
-            [
-                InlineKeyboardButton("👤 Owner", url=_owner_url()),
-                InlineKeyboardButton("📦 Source", url=REPO_URL),
-            ],
-            [InlineKeyboardButton("❌ CLOSE", callback_data="yh:close")],
         ]
     )
 
 
-def back_buttons() -> InlineKeyboardMarkup:
+def back_buttons(color: str = "🟣") -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🔙 BACK TO MENU", callback_data="yh:home")],
             [
-                InlineKeyboardButton("💬 Support", url=_support()),
-                InlineKeyboardButton("👤 Owner", url=_owner_url()),
+                InlineKeyboardButton(
+                    f"{color}{color}  🔙 BACK TO MENU  {color}{color}",
+                    callback_data="yh:home",
+                )
             ],
-            [InlineKeyboardButton("❌ CLOSE", callback_data="yh:close")],
+            [
+                InlineKeyboardButton("💬💚 SUPPORT", url=_support()),
+                InlineKeyboardButton("👤👑 OWNER", url=_owner_url()),
+            ],
+            [
+                InlineKeyboardButton(
+                    "❌❌  CLOSE  ❌❌", callback_data="yh:close"
+                )
+            ],
         ]
     )
 
@@ -102,106 +127,196 @@ def deploy_buttons() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("🚂 Railway", url=RAILWAY_URL),
-                InlineKeyboardButton("🖥 Render", url=RENDER_URL),
+                InlineKeyboardButton("🚂🟢 RAILWAY", url=RAILWAY_URL),
+                InlineKeyboardButton("🖥🔵 RENDER", url=RENDER_URL),
             ],
             [
-                InlineKeyboardButton("🟣 Heroku", url=HEROKU_URL),
-                InlineKeyboardButton("☁ Koyeb", url=KOYEB_URL),
+                InlineKeyboardButton("🟣 HEROKU", url=HEROKU_URL),
+                InlineKeyboardButton("☁️🟡 KOYEB", url=KOYEB_URL),
             ],
-            [InlineKeyboardButton("📦 Source Repo", url=REPO_URL)],
-            [InlineKeyboardButton("🔙 BACK TO MENU", callback_data="yh:home")],
-            [InlineKeyboardButton("❌ CLOSE", callback_data="yh:close")],
+            [
+                InlineKeyboardButton(
+                    "📦🩷  SOURCE REPO  📦🩷", url=REPO_URL
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "🔙🟢  BACK TO MENU  🟢🔙", callback_data="yh:home"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "❌❌  CLOSE  ❌❌", callback_data="yh:close"
+                )
+            ],
         ]
     )
 
 
+# ═══════════════════════ HOME CAPTION (full colour text) ═══════════════════════
 HOME_CAPTION = (
-    f"👑 <b>{BOT_NAME or 'YASHIKA'} COMMAND CENTER</b>\n"
+    f"╔══════════════════════╗\n"
+    f"║  👑 <b>{BOT_NAME or 'YASHIKA'}</b> 👑  ║\n"
+    f"║   <b>COMMAND CENTER</b>   ║\n"
+    f"╚══════════════════════╝\n\n"
+    f"✨ <i>Premium Userbot · Full Colour Menu</i>\n"
+    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    f"🟢 <b>MUSIC</b>     🔴 <b>MOD</b>\n"
+    f"🟣 <b>SCAN</b>      🟡 <b>CAST</b>\n"
+    f"🩷 <b>BRO</b>       🩵 <b>OWNER</b>\n"
+    f"🧡 <b>PM</b>        💚 <b>ECO</b>\n"
+    f"🔵 <b>TOOLS</b>     ⚪️ <b>SYSTEM</b>\n"
+    f"🚀 <b>DEPLOY</b>\n\n"
     f"━━━━━━━━━━━━━━━━━━━━\n"
-    f"✨ <i>Premium Userbot · Select category</i>\n\n"
-    f"🟢 Music  🔴 Mod  🟣 Scan  🟡 Broadcast\n"
-    f"🩷 Bro  🩵 Owner  🧡 PM  💚 Economy\n"
-    f"🔵 Tools  ⚪ System  🚀 Deploy\n\n"
-    f"📌 Prefix: <code>.</code> <code>!</code>\n"
-    f"🔐 Only OWNER / sudo"
+    f"📌 Prefix: <code>.</code>  <code>!</code>\n"
+    f"🔐 Access: <b>OWNER / SUDO only</b>\n"
+    f"💎 Style: <b>Premium Colour Board</b>"
 )
 
+
+# ═══════════════════════ CATEGORY PAGES (each colour themed) ═══════════════════════
 HELP_DATA = {
     "vc": (
-        "🟢 <b>MUSIC / VC</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.play</code> — song (YT / reply)\n"
-        "<code>.vply</code> — video play\n"
-        "<code>.skip</code> · <code>.stop</code> · <code>.end</code>\n"
-        "<code>.pause</code> · <code>.resume</code> · <code>.queue</code>\n"
-        "<i>cookies.txt + ffmpeg recommended</i>"
+        "🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n"
+        "🎵 <b>MUSIC / VC</b>\n"
+        "🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢\n\n"
+        "🟢 <code>.play</code> — song (YT / reply)\n"
+        "🟢 <code>.vply</code> — video play\n"
+        "🟢 <code>.skip</code> — next track\n"
+        "🟢 <code>.stop</code> / <code>.end</code> — leave VC\n"
+        "🟢 <code>.pause</code> — pause\n"
+        "🟢 <code>.resume</code> — resume\n"
+        "🟢 <code>.queue</code> — show queue\n\n"
+        "💚 <i>cookies.txt + ffmpeg recommended</i>"
     ),
     "mod": (
-        "🔴 <b>MODERATION</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.gban</code> / <code>.ungban</code>\n"
-        "<code>.gmute</code> · <code>.gdel</code>\n"
-        "<code>.warn</code> / <code>.warns</code>\n"
-        "<code>.tagall</code> · <code>.welcome</code>\n"
-        "<code>.antilink</code> · <code>.antiflood</code>\n"
-        "<code>.antidelete</code> · <code>.locks</code>\n"
-        "<code>.nightmode</code> · <code>.slowmode</code>\n"
-        "<code>.zombies</code> · <code>.rules</code> · <code>.autokick</code>"
+        "🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n"
+        "👮 <b>MODERATION</b>\n"
+        "🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n\n"
+        "🔴 <code>.gban</code> / <code>.ungban</code>\n"
+        "🔴 <code>.gmute</code> · <code>.gdel</code>\n"
+        "🔴 <code>.warn</code> / <code>.warns</code>\n"
+        "🔴 <code>.tagall</code> · <code>.welcome</code>\n"
+        "🔴 <code>.antilink</code> · <code>.antiflood</code>\n"
+        "🔴 <code>.antidelete</code> · <code>.locks</code>\n"
+        "🔴 <code>.nightmode</code> · <code>.slowmode</code>\n"
+        "🔴 <code>.zombies</code> · <code>.rules</code>\n"
+        "🔴 <code>.autokick</code>"
     ),
     "scan": (
-        "🟣 <b>USER SCAN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.uinfo</code> / <code>.scan</code> — full report\n"
-        "<code>.dphist</code> · <code>.member</code> · <code>.fwdinfo</code>\n"
-        "<code>.commonlist</code> · <code>.whois</code> · <code>.mutual</code>\n"
-        "<code>.picspy</code> — DP\n"
-        "<i>Real API only · common chats + observed activity</i>"
+        "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n"
+        "🕵️ <b>USER SCAN</b>\n"
+        "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n\n"
+        "🟣 <code>.uinfo</code> / <code>.scan</code> — full report\n"
+        "🟣 <code>.dphist</code> — profile photos\n"
+        "🟣 <code>.member</code> — status in group\n"
+        "🟣 <code>.fwdinfo</code> — forward origin\n"
+        "🟣 <code>.commonlist</code> — mutual groups\n"
+        "🟣 <code>.whois</code> · <code>.spy</code>\n"
+        "🟣 <code>.mutual</code> · <code>.picspy</code>\n\n"
+        "💜 <i>Real API · common chats + activity</i>"
     ),
     "cast": (
-        "🟡 <b>BROADCAST</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.broadcast</code> — all tracked\n"
-        "<code>.gcast</code> — groups · <code>.dmcast</code> — DMs\n"
-        "Reply + command → copy message"
+        "🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡\n"
+        "📢 <b>BROADCAST</b>\n"
+        "🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡\n\n"
+        "🟡 <code>.broadcast</code> — all tracked chats\n"
+        "🟡 <code>.gcast</code> — groups only\n"
+        "🟡 <code>.dmcast</code> — private DMs only\n\n"
+        "💛 Reply + command → message copy"
     ),
     "bro": (
-        "🩷 <b>BRO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.bro</code> — DM+group auto-reply\n"
-        "<code>.brodm</code> · <code>.brogroup</code>\n"
-        "<code>.unbro</code> · <code>.brolist</code>\n"
-        "<i>200+ lines pool</i>"
+        "🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷\n"
+        "💕 <b>BRO AUTO-REPLY</b>\n"
+        "🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷\n\n"
+        "🩷 <code>.bro</code> — DM + GROUP\n"
+        "🩷 <code>.brodm</code> — sirf DM\n"
+        "🩷 <code>.brogroup</code> — sirf GROUP\n"
+        "🩷 <code>.unbro</code> — disable\n"
+        "🩷 <code>.brolist</code> — targets\n\n"
+        "💗 <i>200+ lines pool</i>"
     ),
     "owner": (
-        "🩵 <b>OWNER / SUDO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.addsudo</code> · <code>.delsudo</code> · <code>.sudolist</code>\n"
-        "<code>.clone</code> · <code>.back</code>\n"
-        "<code>.track</code> · <code>.trackadd</code> · <code>.ghost</code>"
+        "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n"
+        "👑 <b>OWNER / SUDO</b>\n"
+        "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n\n"
+        "🩵 <code>.addsudo</code> · <code>.delsudo</code>\n"
+        "🩵 <code>.sudolist</code>\n"
+        "🩵 <code>.clone</code> — clone profile\n"
+        "🩵 <code>.back</code> — restore profile\n"
+        "🩵 <code>.track</code> on/off\n"
+        "🩵 <code>.trackadd</code> · <code>.trackdel</code>\n"
+        "🩵 <code>.ghost</code> · <code>.secretlog</code>"
     ),
     "pm": (
-        "🧡 <b>PM GUARD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.approve</code> / <code>.unapprove</code>\n"
-        "<code>.antispam</code> · <code>.secretlog</code>"
+        "🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡\n"
+        "🛡 <b>PM GUARD</b>\n"
+        "🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡\n\n"
+        "🧡 <code>.approve</code> / <code>.unapprove</code>\n"
+        "🧡 <code>.antispam</code>\n"
+        "🧡 <code>.pmguard</code>\n"
+        "🧡 <code>.secretlog</code>"
     ),
     "eco": (
-        "💚 <b>ECONOMY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.bal</code> · <code>.daily</code> · <code>.rob</code> · <code>.pay</code>"
+        "💚💚💚💚💚💚💚💚💚💚\n"
+        "💰 <b>ECONOMY</b>\n"
+        "💚💚💚💚💚💚💚💚💚💚\n\n"
+        "💚 <code>.bal</code> / <code>.balance</code>\n"
+        "💚 <code>.daily</code> — daily reward\n"
+        "💚 <code>.rob</code> — rob user\n"
+        "💚 <code>.pay</code> — transfer coins"
     ),
     "tools": (
-        "🔵 <b>TOOLS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.afk</code> · <code>.info</code> · <code>.id</code>\n"
-        "<code>.notes</code> · <code>.qr</code> · <code>.paste</code>\n"
-        "<code>.telegraph</code> · <code>.kang</code> · <code>.download</code>"
+        "🔵🔵🔵🔵🔵🔵🔵🔵🔵🔵\n"
+        "🛠 <b>TOOLS / UTILS</b>\n"
+        "🔵🔵🔵🔵🔵🔵🔵🔵🔵🔵\n\n"
+        "🔵 <code>.afk</code> · <code>.info</code> · <code>.id</code>\n"
+        "🔵 <code>.notes</code> · <code>.filter</code>\n"
+        "🔵 <code>.qr</code> · <code>.paste</code>\n"
+        "🔵 <code>.telegraph</code> · <code>.stats</code>\n"
+        "🔵 <code>.kang</code> · <code>.download</code>"
     ),
     "system": (
-        "⚪ <b>SYSTEM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ping</code> · <code>.alive</code>\n"
-        "<code>.help</code> / <code>.menu</code>\n"
-        f"Name: <b>{BOT_NAME or 'Yashika'}</b> · Pure Userbot"
+        "⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️\n"
+        "⚙️ <b>SYSTEM</b>\n"
+        "⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️\n\n"
+        "⚪️ <code>.ping</code> — latency\n"
+        "⚪️ <code>.alive</code> — status\n"
+        "⚪️ <code>.help</code> / <code>.menu</code> — this menu\n"
+        "⚪️ <code>.cmds</code> — alias\n\n"
+        f"💎 Name: <b>{BOT_NAME or 'Yashika'}</b>\n"
+        "💎 Mode: <b>Pure Userbot</b>"
     ),
     "deploy": (
-        "🚀 <b>DEPLOY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "Railway · Render · Heroku · Koyeb · VPS\n\n"
-        "ENV: <code>API_ID</code> <code>API_HASH</code>\n"
+        "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n"
+        "🚀 <b>DEPLOY ANYWHERE</b>\n"
+        "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n\n"
+        "🟢 Railway\n"
+        "🔵 Render\n"
+        "🟣 Heroku\n"
+        "🟡 Koyeb\n"
+        "⚪️ VPS / Local\n\n"
+        "🔑 ENV required:\n"
+        "<code>API_ID</code> <code>API_HASH</code>\n"
         "<code>STRING_SESSION</code> <code>OWNER_ID</code>\n\n"
-        "Start: <code>python3 main.py</code>"
+        "▶️ Start: <code>python3 main.py</code>\n\n"
+        "👇 Platform buttons dabao"
     ),
+}
+
+# colour used for back button per page
+PAGE_COLOR = {
+    "vc": "🟢",
+    "mod": "🔴",
+    "scan": "🟣",
+    "cast": "🟡",
+    "bro": "🩷",
+    "owner": "🩵",
+    "pm": "🧡",
+    "eco": "💚",
+    "tools": "🔵",
+    "system": "⚪️",
+    "deploy": "🚀",
 }
 
 
@@ -259,10 +374,14 @@ async def help_callback(client, query: CallbackQuery):
     if data == "home":
         try:
             if query.message.photo:
-                await query.message.edit_caption(HOME_CAPTION, reply_markup=main_buttons())
+                await query.message.edit_caption(
+                    HOME_CAPTION, reply_markup=main_buttons()
+                )
             else:
                 await query.message.edit_text(
-                    HOME_CAPTION, reply_markup=main_buttons(), disable_web_page_preview=True
+                    HOME_CAPTION,
+                    reply_markup=main_buttons(),
+                    disable_web_page_preview=True,
                 )
         except Exception:
             pass
@@ -276,7 +395,9 @@ async def help_callback(client, query: CallbackQuery):
             if query.message.photo:
                 await query.message.edit_caption(text, reply_markup=kb)
             else:
-                await query.message.edit_text(text, reply_markup=kb, disable_web_page_preview=True)
+                await query.message.edit_text(
+                    text, reply_markup=kb, disable_web_page_preview=True
+                )
         except Exception:
             pass
         await query.answer()
@@ -287,12 +408,15 @@ async def help_callback(client, query: CallbackQuery):
         await query.answer("Not found", show_alert=True)
         return
 
+    color = PAGE_COLOR.get(data, "🟣")
+    kb = back_buttons(color)
+
     try:
         if query.message.photo:
-            await query.message.edit_caption(text, reply_markup=back_buttons())
+            await query.message.edit_caption(text, reply_markup=kb)
         else:
             await query.message.edit_text(
-                text, reply_markup=back_buttons(), disable_web_page_preview=True
+                text, reply_markup=kb, disable_web_page_preview=True
             )
     except Exception:
         pass
