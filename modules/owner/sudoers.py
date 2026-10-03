@@ -1,39 +1,33 @@
 """
-Auth decorators.
+Auth decorators — pure userbot
 
-sudo_only:
-  - client me.id  (apna userbot account)
-  - OWNER_ID
-  - SUDO_USERS list
-  → silent ignore baaki
-
-owner_or_sudo:
-  - OWNER_ID ya sudo list
-  → broadcast / admin-style bot cmds
-
-owner_only:
-  - sirf OWNER_ID (addsudo / delsudo)
+sudo_only: me.id | OWNER_ID | SUDO_USERS
+owner_or_sudo: OWNER_ID | sudo
+owner_only: OWNER_ID only
 """
 import functools
 from pyrogram import filters
 from pyrogram.types import Message
 
-from core.clients import app, bot
+from core.clients import app
 from config import OWNER_ID
 from database.mongo import add_sudo, remove_sudo, get_sudoers
 
-SUDO_USERS: set[int] = {OWNER_ID}
+SUDO_USERS: set = {OWNER_ID} if OWNER_ID else set()
 
 
 async def load_sudoers():
     SUDO_USERS.clear()
-    SUDO_USERS.add(OWNER_ID)
-    for uid in await get_sudoers():
-        SUDO_USERS.add(uid)
+    if OWNER_ID:
+        SUDO_USERS.add(OWNER_ID)
+    try:
+        for uid in await get_sudoers():
+            SUDO_USERS.add(uid)
+    except Exception:
+        pass
 
 
 def sudo_only(func):
-    """me.id | OWNER_ID | sudo list — userbot cmds (.play etc.)."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user:
@@ -47,12 +41,11 @@ def sudo_only(func):
                 return await func(client, message, *args, **kwargs)
         except Exception:
             return
-        return  # silent
+        return
     return wrapper
 
 
 def owner_or_sudo(func):
-    """OWNER_ID ya sudo — broadcast etc. (group/DM)."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user:
@@ -66,7 +59,6 @@ def owner_or_sudo(func):
 
 
 def owner_only(func):
-    """Sirf .env OWNER_ID."""
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if not message.from_user or message.from_user.id != OWNER_ID:
@@ -75,7 +67,6 @@ def owner_only(func):
     return wrapper
 
 
-# ---------- sudo management (OWNER only) ----------
 @app.on_message(filters.command(["addsudo"], prefixes=["/", ".", "!"]))
 @owner_only
 async def addsudo_cmd(client, message: Message):
