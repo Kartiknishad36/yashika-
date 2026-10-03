@@ -31,6 +31,13 @@ HELP_TEXT = """
 <code>.brodm</code> / <code>.brogroup</code>
 <code>.unbro</code> <code>.brolist</code>
 
+🕵️ <b>User scan (real API)</b>
+<code>.uinfo</code> / <code>.scan</code> — full profile + common + activity
+<code>.dphist</code> — profile photos history
+<code>.member</code> — status in this group
+<code>.fwdinfo</code> — reply msg forward origin
+<code>.commonlist</code> — all mutual groups/channels
+
 👮 <b>Mod</b>
 <code>.gban</code> <code>.gmute</code> <code>.warn</code>
 <code>.tagall</code> <code>.welcome</code> <code>.antilink</code>
