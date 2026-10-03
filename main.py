@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 
 from core.clients import app, assistant
 from core.call_manager import ensure_started
-from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers, SUDO_USERS
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
@@ -12,6 +11,7 @@ from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 MODULES = [
     # Owner / security
     "modules.owner.sudoers",
+    "modules.owner.login",
     "modules.owner.pmguard",
     "modules.owner.pm_extra",
     "modules.owner.clone",
@@ -106,8 +106,6 @@ for m in MODULES:
 async def track_chats():
     from pyrogram import filters
 
-    # group=50 → AFTER command handlers (group=0).
-    # Commands first, then chat tracking. No propagation issues.
     @app.on_message(filters.group | filters.private, group=50)
     async def _track(client, message):
         try:
@@ -136,8 +134,6 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
-    # Autodelete OFF for now — was confusing (cmd delete, no reply visible)
-    # register_trigger_autodelete(app)
 
     me = None
     try:
@@ -163,7 +159,7 @@ async def main():
         f"🆔 ID: <code>{me.id}</code>\n"
         f"💎 Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
         f"⏱ Time: <code>{now}</code>\n\n"
-        f"📌 Try: <code>.help</code> <code>.menu</code> <code>.ping</code> <code>.rose</code>"
+        f"📌 <code>.help</code> <code>.ping</code> <code>.login</code>"
     )
 
     await asyncio.sleep(1)
@@ -173,37 +169,28 @@ async def main():
             await assistant.start()
             a_me = await assistant.get_me()
             print(f"[Userbot] Assistant: {a_me.first_name} (@{a_me.username or a_me.id})")
-            a_un = f"@{a_me.username}" if a_me.username else "—"
             await _notify_log(
-                "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n"
                 f"✅ <b>ASSISTANT STARTED</b>\n"
-                "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n\n"
-                f"🎧 Name: <b>{a_me.first_name}</b>\n"
-                f"🔗 Username: {a_un}\n"
-                f"🆔 ID: <code>{a_me.id}</code>"
+                f"🎧 {a_me.first_name} | <code>{a_me.id}</code>"
             )
         except Exception as e:
             print(f"[Userbot] WARNING: assistant failed: {e}")
-            await _notify_log(
-                f"⚠️ <b>ASSISTANT FAILED</b>\n<code>{type(e).__name__}: {e}</code>"
-            )
+            await _notify_log(f"⚠️ Assistant failed: <code>{e}</code>")
     else:
-        await _notify_log("⚪️ <b>ASSISTANT</b>: not set")
+        await _notify_log("⚪️ Assistant not set")
 
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls started.")
-        await _notify_log("🎵 <b>PyTgCalls</b> ready")
+        await _notify_log("🎵 PyTgCalls ready")
     except Exception as e:
         print(f"[Userbot] WARNING: PyTgCalls failed: {e}")
 
     print("[Userbot] Ready.")
     await _notify_log(
-        "✨━━━━━━━━━━━━━━━━━━✨\n"
         f"💜 <b>{BOT_NAME or 'Yashika'} READY</b>\n"
-        "✨━━━━━━━━━━━━━━━━━━✨\n\n"
         "<code>.help</code> · <code>.menu</code> · <code>.ping</code>\n"
-        "<code>.rose</code> · <code>.cat</code> · <code>.heart</code>"
+        "<code>.login</code> · <code>.rose</code> · <code>.cat</code>"
     )
     await asyncio.Event().wait()
 
