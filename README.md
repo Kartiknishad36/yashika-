@@ -2,53 +2,38 @@
   <img src="https://img.shields.io/badge/YASHIKA-PREMIUM%20USERBOT-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/>
 </p>
 
-<h1 align="center">✨ 𝐘𝐀𝐒𝐇𝐈𝐊𝐀 𝐁𝐎𝐓 ✨</h1>
+<h1 align="center">✨ 𝐘𝐀𝐒𝐇𝐈𝐊𝐀 𝐔𝐒𝐄𝐑𝐁𝐎𝐓 ✨</h1>
 
 <p align="center">
-  <b>👑 Royal Power • Premium Userbot + Music Bot 👑</b><br>
-  <i>One Bot • Endless Possibilities</i>
+  <b>👑 Pure Userbot • Music • Mod • Fun 👑</b><br>
+  <i>No bot token required — everything runs on your account</i>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-FFD700?style=flat-square&logo=python&logoColor=black"/>
   <img src="https://img.shields.io/badge/Kurigram-2.x-FFD700?style=flat-square"/>
   <img src="https://img.shields.io/badge/PyTgCalls-2.x-FFD700?style=flat-square"/>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/GitHub-Repo-FFD700?style=for-the-badge&logo=github&logoColor=black"/></a>
-  <a href="https://t.me/+Ml99kT7JCMo0OTdl"><img src="https://img.shields.io/badge/Support%20Group-Join-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/></a>
-  <a href="https://t.me/ye_duniya_ek_sapna_he"><img src="https://img.shields.io/badge/Updates%20Channel-Subscribe-FFD700?style=for-the-badge&logo=telegram&logoColor=black"/></a>
+  <img src="https://img.shields.io/badge/Mode-Userbot%20Only-gold?style=flat-square"/>
 </p>
 
 ---
 
 ## 👑 About
 
-**Yashika** is a premium hybrid **Userbot + Music Bot**:
+**Yashika** is a **pure userbot** (no BotFather bot):
 
 - 🎵 Voice chat music / video (yt-dlp + cookies)
 - 🛡 PM Guard, anti-spam, secret log
 - 👮 Group moderation & global ban
-- 🤖 Gemini AI chatbot
 - 🎮 Games • Economy • Fun
 - 🔥 Raid / spam / tagall / bro auto-reply
-- 🔑 Multi-login + clone sessions
+- 🔑 Owner + sudo system
 
 > **Powered by Kartik Nishad** ⚡
 
 ---
 
 ## 🚀 Deploy
-
-### One-click platforms
-
-<p align="center">
-  <a href="https://railway.app/template"><img src="https://img.shields.io/badge/Deploy%20on-Railway-FFD700?style=for-the-badge&logo=railway&logoColor=black"/></a>
-  <a href="https://heroku.com/deploy?template=https://github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/Deploy%20on-Heroku-FFD700?style=for-the-badge&logo=heroku&logoColor=black"/></a>
-  <a href="https://app.koyeb.com/deploy?type=git&repository=github.com/Kartiknishad36/yashika-"><img src="https://img.shields.io/badge/Deploy%20on-Koyeb-FFD700?style=for-the-badge&logo=koyeb&logoColor=black"/></a>
-  <a href="https://render.com/deploy"><img src="https://img.shields.io/badge/Deploy%20on-Render-FFD700?style=for-the-badge&logo=render&logoColor=black"/></a>
-</p>
 
 ### VPS / Local
 
@@ -57,9 +42,13 @@ git clone https://github.com/Kartiknishad36/yashika-.git
 cd yashika-
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env with your values
+# edit .env — STRING_SESSION required (no BOT_TOKEN)
 python3 main.py
 ```
+
+### Platforms
+
+Railway / Heroku / Koyeb / Render — same env vars as below.
 
 ---
 
@@ -69,53 +58,47 @@ python3 main.py
 |----------|----------|-------------|
 | `API_ID` | ✅ | From [my.telegram.org](https://my.telegram.org) |
 | `API_HASH` | ✅ | From my.telegram.org |
-| `STRING_SESSION` | ✅ | Userbot session string |
+| `STRING_SESSION` | ✅ | Your user account session string |
 | `OWNER_ID` | ✅ | Your Telegram numeric ID |
-| `BOT_TOKEN` | ✅ | From @BotFather |
-| `ASSISTANT_SESSION` | ⭐ | VC assistant session (recommended) |
-| `COOKIES_PATH` | ⭐ | Path to `cookies.txt` for YouTube |
-| `GEMINI_API_KEY` | ⭐ | Google Gemini API key for AI |
-| `LOG_GROUP_ID` | ⭐ | Logs group ID |
-| `SUPPORT_CHAT` | ⭐ | Support group link |
-| `UPDATE_CHANNEL` | ⭐ | Updates channel link |
+| `ASSISTANT_SESSION` | ⭐ | Optional 2nd account for VC |
+| `COOKIES_PATH` | ⭐ | `cookies.txt` for YouTube |
+| `GEMINI_API_KEY` | ⭐ | Optional AI |
+| `LOG_GROUP_ID` | ⭐ | Logs group |
 
-See `.env.example` for the full list.
+**`BOT_TOKEN` is NOT used.** Pure userbot mode.
 
-> ⚠️ **Never commit** `.env`, `cookies.txt`, or `*.session` files.
+> ⚠️ Never commit `.env`, `cookies.txt`, or `*.session`.
 
 ---
 
-## 📋 Commands (overview)
+## 📋 Commands (userbot prefixes `.` `!`)
 
 | Category | Commands |
 |----------|----------|
 | 🎵 Music | `.play` `.vply` `.skip` `.stop` |
-| 👑 Owner | `.addsudo` `.approve` `.clone` |
+| 👑 Owner | `.addsudo` `.approve` |
 | 🛡 PM | `.verify` `.antispam` `.secretlog` |
 | 🔥 Raid | `.raid` `.spam` |
 | 💕 Bro | `.bro` `.brodm` `.brogroup` |
-| 🤖 AI | `/chatbot` `/ai` `/ask` |
-| 🎮 Fun | `/couple` `/dice` `/kiss` |
-| 💰 Economy | `/bal` `/daily` `/rob` |
+| 🎮 Fun | `.couple` `.dice` |
+| 💰 Economy | `.bal` `.daily` `.rob` |
 
 ---
 
-## 📁 Project Structure
+## 📁 Structure
 
 ```
 yashika-/
 ├── main.py
 ├── config.py
-├── requirements.txt
-├── .env.example
-├── core/           # clients, call_manager, autodelete
-├── database/       # mongo / storage helpers
+├── core/           # clients (userbot + optional assistant), call_manager
+├── database/
 └── modules/
-    ├── bot/        # start, music, AI, logger
-    ├── owner/      # sudo, pmguard, raid, clone…
-    ├── global_mod/ # mod, bro, antilink, tagall…
-    ├── utils/      # afk, notes, fun tools…
-    ├── media/      # kang, download, social
+    ├── owner/      # sudo, pmguard, raid…
+    ├── global_mod/ # mod, bro, tagall…
+    ├── vc/         # music play / controls
+    ├── utils/
+    ├── media/
     ├── games/
     └── economy/
 ```
@@ -125,10 +108,10 @@ yashika-/
 ## 🔗 Links
 
 - **Repo:** [github.com/Kartiknishad36/yashika-](https://github.com/Kartiknishad36/yashika-)
-- **Support:** [Join Group](https://t.me/+Ml99kT7JCMo0OTdl)
+- **Support:** [Group](https://t.me/+Ml99kT7JCMo0OTdl)
 - **Updates:** [Channel](https://t.me/ye_duniya_ek_sapna_he)
 - **Owner:** [Kartik Nishad](https://t.me/KARTIK_NISHAD_3)
 
 ---
 
-<p align="center"><b>Made with ⚡ by Kartik Nishad</b></p>
+<p align="center"><b>Pure Userbot • Made by Kartik Nishad ⚡</b></p>
