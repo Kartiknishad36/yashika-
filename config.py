@@ -6,7 +6,6 @@ if os.path.exists(".env"):
 
 
 def _int(name: str, default: int = 0) -> int:
-    """Empty / invalid env → default, no crash."""
     val = os.environ.get(name, "")
     if val is None or str(val).strip() == "":
         return default
@@ -23,15 +22,15 @@ def _str(name: str, default: str = "") -> str:
     return str(val).strip()
 
 
-# ===================== Telegram Core =====================
+# ===================== Telegram Core (USERBOT) =====================
 API_ID = _int("API_ID", 0)
 API_HASH = _str("API_HASH", "")
-BOT_TOKEN = _str("BOT_TOKEN", "")
 STRING_SESSION = _str("STRING_SESSION", "")
 ASSISTANT_SESSION = _str("ASSISTANT_SESSION", "")
-
-# Optional: assistant numeric id (manual invite / logs). 0 = unused
 ASSISTANT_ID = _int("ASSISTANT_ID", 0)
+
+# BOT_TOKEN kept only for backwards-compat — pure userbot does NOT use it
+BOT_TOKEN = _str("BOT_TOKEN", "")
 
 # ===================== Owner =====================
 OWNER_ID = _int("OWNER_ID", 0)
@@ -43,12 +42,11 @@ COOKIES_PATH = _str("COOKIES_PATH", "cookies.txt")
 BASE_URL = _str("BASE_URL", "")
 API_KEY = _str("API_KEY", "")
 
-# ===================== AI (Gemini chatbot) =====================
+# ===================== AI (Gemini) =====================
 GEMINI_API_KEY = _str("GEMINI_API_KEY", "")
-# 2.5-flash = fast & usually available; override in .env if needed
-GEMINI_MODEL = _str("GEMINI_MODEL", "gemini-3.6-flash")
+GEMINI_MODEL = _str("GEMINI_MODEL", "gemini-2.5-flash")
 
-# ===================== Bot identity / UI =====================
+# ===================== Identity / links =====================
 BOT_NAME = _str("BOT_NAME", "Yashika")
 BOT_USERNAME = _str("BOT_USERNAME", "").lstrip("@")
 OWNER_USERNAME = _str("OWNER_USERNAME", "").lstrip("@")
@@ -58,6 +56,5 @@ UPDATE_CHANNEL = _str("UPDATE_CHANNEL", "https://t.me/YourUpdates")
 START_PIC = _str("START_PIC", "assets/start.jpg")
 PING_PIC = _str("PING_PIC", "assets/ping.jpg")
 
-# Userbot command prefixes (string ".!" → list ['.', '!'])
 _pref = _str("PREFIXES", ".!")
 PREFIXES = list(_pref) if _pref else [".", "!"]
