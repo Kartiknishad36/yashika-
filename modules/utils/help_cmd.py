@@ -1,5 +1,5 @@
 """
-👑 YASHIKA — PREMIUM COLOUR HELP MENU (TEXT + BUTTONS)
+👑 YASHIKA — PREMIUM HELP (text + colour buttons, no image)
 .help / .menu / .cmds
 """
 from pyrogram import filters
@@ -12,16 +12,9 @@ from pyrogram.types import (
 
 from core.clients import app
 from modules.owner.sudoers import sudo_only, SUDO_USERS
-from config import (
-    BOT_NAME,
-    SUPPORT_CHAT,
-    UPDATE_CHANNEL,
-    OWNER_USERNAME,
-    OWNER_ID,
-)
+from config import BOT_NAME, SUPPORT_CHAT, OWNER_USERNAME, OWNER_ID
 
 PREFIXES = [".", "!"]
-REPO_URL = "https://github.com/Kartiknishad36/yashika-"
 
 
 def _owner_url() -> str:
@@ -31,10 +24,6 @@ def _owner_url() -> str:
 
 def _support() -> str:
     return SUPPORT_CHAT or "https://t.me/+Ml99kT7JCMo0OTdl"
-
-
-def _channel() -> str:
-    return UPDATE_CHANNEL or "https://t.me/ye_duniya_ek_sapna_he"
 
 
 def main_buttons() -> InlineKeyboardMarkup:
@@ -50,26 +39,25 @@ def main_buttons() -> InlineKeyboardMarkup:
             ],
             [
                 InlineKeyboardButton("🩷 BRO", callback_data="yh:bro"),
+                InlineKeyboardButton("🔑 LOGIN", callback_data="yh:login"),
+            ],
+            [
                 InlineKeyboardButton("🩵 OWNER", callback_data="yh:owner"),
-            ],
-            [
                 InlineKeyboardButton("🧡 PM", callback_data="yh:pm"),
+            ],
+            [
                 InlineKeyboardButton("💚 ECO", callback_data="yh:eco"),
-            ],
-            [
                 InlineKeyboardButton("🔵 TOOLS", callback_data="yh:tools"),
-                InlineKeyboardButton("🌹 FUN", callback_data="yh:fun"),
             ],
             [
+                InlineKeyboardButton("🌹 FUN", callback_data="yh:fun"),
                 InlineKeyboardButton("⚪️ SYSTEM", callback_data="yh:system"),
             ],
             [
                 InlineKeyboardButton("💬 SUPPORT", url=_support()),
                 InlineKeyboardButton("👤 OWNER", url=_owner_url()),
             ],
-            [
-                InlineKeyboardButton("❌ CLOSE", callback_data="yh:close"),
-            ],
+            [InlineKeyboardButton("❌ CLOSE", callback_data="yh:close")],
         ]
     )
 
@@ -86,14 +74,14 @@ def back_buttons() -> InlineKeyboardMarkup:
 HOME = (
     f"👑 <b>{BOT_NAME or 'YASHIKA'} COMMAND CENTER</b>\n"
     f"━━━━━━━━━━━━━━━━━━━━\n"
-    f"✨ Premium Userbot Menu\n\n"
-    f"🟢 MUSIC · 🔴 MOD · 🟣 SCAN\n"
-    f"🟡 CAST · 🩷 BRO · 🩵 OWNER\n"
-    f"🧡 PM · 💚 ECO · 🔵 TOOLS\n"
-    f"🌹 FUN · ⚪️ SYSTEM\n\n"
-    f"📌 Prefix: <code>.</code> or <code>!</code>\n"
-    f"🔐 Own account / OWNER / SUDO\n\n"
-    f"Quick: <code>.ping</code> <code>.rose</code> <code>.cat</code>"
+    f"✨ Premium Userbot · Text Menu\n\n"
+    f"🟢 MUSIC  🔴 MOD  🟣 SCAN\n"
+    f"🟡 CAST  🩷 BRO  🔑 LOGIN\n"
+    f"🩵 OWNER  🧡 PM  💚 ECO\n"
+    f"🔵 TOOLS  🌹 FUN  ⚪️ SYSTEM\n\n"
+    f"📌 Prefix: <code>.</code> <code>!</code>\n"
+    f"🔐 OWNER / SUDO / own account\n\n"
+    f"Quick: <code>.ping</code> <code>.login</code> <code>.rose</code>"
 )
 
 HELP_DATA = {
@@ -112,8 +100,7 @@ HELP_DATA = {
     "scan": (
         "🟣 <b>SCAN + DP</b>\n━━━━━━━━━━━━\n"
         "<code>.uinfo</code> <code>.scan</code> <code>.dphist</code>\n"
-        "<code>.dp</code> <code>.dpsave</code> <code>.dplog</code>\n"
-        "<code>.fwdinfo</code> <code>.commonlist</code>"
+        "<code>.dp</code> <code>.dpsave</code> <code>.dplog</code>"
     ),
     "cast": (
         "🟡 <b>CAST</b>\n━━━━━━━━━━━━\n"
@@ -124,6 +111,15 @@ HELP_DATA = {
         "<code>.bro</code> <code>.brodm</code> <code>.brogroup</code>\n"
         "<code>.unbro</code> <code>.brolist</code>"
     ),
+    "login": (
+        "🔑 <b>LOGIN</b> (OWNER / SUDO)\n━━━━━━━━━━━━\n"
+        "<code>.login</code> — DM me start\n"
+        "  Phone → OTP → 2FA password\n"
+        "  Session → <b>Saved Messages only</b>\n\n"
+        "<code>.addsession STRING</code> — paste session\n"
+        "<code>.cancellogin</code> — cancel flow\n"
+        "<code>.mylogin</code> — status"
+    ),
     "owner": (
         "🩵 <b>OWNER</b>\n━━━━━━━━━━━━\n"
         "<code>.addsudo</code> <code>.delsudo</code> <code>.sudolist</code>\n"
@@ -131,7 +127,7 @@ HELP_DATA = {
     ),
     "pm": (
         "🧡 <b>PM</b>\n━━━━━━━━━━━━\n"
-        "<code>.approve</code> <code>.unapprove</code> <code>.pmguard</code>"
+        "<code>.approve</code> <code>.unapprove</code> <code>.verify</code>"
     ),
     "eco": (
         "💚 <b>ECO</b>\n━━━━━━━━━━━━\n"
@@ -145,8 +141,7 @@ HELP_DATA = {
     "fun": (
         "🌹 <b>FUN</b>\n━━━━━━━━━━━━\n"
         "<code>.rose</code> <code>.cat</code> <code>.heart</code>\n"
-        "<code>.hacker</code> <code>.butterfly</code> <code>.myson</code>\n"
-        "<code>.error</code>"
+        "<code>.hacker</code> <code>.butterfly</code> <code>.myson</code>"
     ),
     "system": (
         "⚪️ <b>SYSTEM</b>\n━━━━━━━━━━━━\n"
@@ -174,11 +169,11 @@ async def _send_help(message: Message):
             HOME, reply_markup=main_buttons(), disable_web_page_preview=True
         )
     except Exception as e:
-        print(f"[help] fail: {e}")
+        print(f"[help] {e}")
         try:
             await message.reply_text(HOME)
         except Exception as e2:
-            print(f"[help] fail2: {e2}")
+            print(f"[help2] {e2}")
 
 
 @app.on_message(
