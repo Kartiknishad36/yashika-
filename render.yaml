@@ -1,0 +1,15 @@
+services:
+  - type: worker
+    name: yashika-userbot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python3 main.py
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: STRING_SESSION
+        sync: false
+      - key: OWNER_ID
+        sync: false
