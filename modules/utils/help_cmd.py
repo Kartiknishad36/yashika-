@@ -1,6 +1,5 @@
 """
 👑 YASHIKA — FULL PREMIUM COLOUR HELP MENU
-Har button colour emoji · har page colour theme
 .help / .menu / .cmds
 """
 from pyrogram import filters
@@ -12,13 +11,14 @@ from pyrogram.types import (
 )
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import sudo_only, SUDO_USERS
 from config import (
     BOT_NAME,
     SUPPORT_CHAT,
     UPDATE_CHANNEL,
     OWNER_USERNAME,
     START_PIC,
+    OWNER_ID,
 )
 
 PREFIXES = [".", "!"]
@@ -159,7 +159,7 @@ HOME_CAPTION = (
     f"🚀 <b>DEPLOY</b>\n\n"
     f"━━━━━━━━━━━━━━━━━━━━\n"
     f"📌 Prefix: <code>.</code>  <code>!</code>\n"
-    f"🔐 Access: <b>OWNER / SUDO only</b>\n"
+    f"🔐 Access: <b>OWNER / SUDO / own account</b>\n"
     f"💎 Style: <b>Premium Colour Board</b>"
 )
 
@@ -196,105 +196,72 @@ HELP_DATA = {
         "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n"
         "🕵️ <b>USER SCAN + MONGO DP</b>\n"
         "🟣🟣🟣🟣🟣🟣🟣🟣🟣🟣\n\n"
-        "🟣 <code>.uinfo</code> / <code>.scan</code> — full report\n"
-        "🟣 <code>.dphist</code> — profile photos\n"
-        "🟣 <code>.member</code> — status in group\n"
-        "🟣 <code>.fwdinfo</code> — forward origin\n"
-        "🟣 <code>.commonlist</code> — mutual groups\n"
-        "🟣 <code>.whois</code> · <code>.spy</code>\n"
-        "🟣 <code>.mutual</code> · <code>.picspy</code>\n\n"
-        "🥭 <b>MONGO DP</b>\n"
-        "🟣 <code>.dp</code> / <code>.mongodp</code> — saari DPs bhejo\n"
-        "🟣 <code>.dpsave</code> — DP file_id DB me save\n"
-        "🟣 <code>.dplog</code> — live + stored history\n"
-        "🟣 <code>.dpclear</code> — stored DP clear\n\n"
-        "💜 <i>Real API · auto-track new DP</i>"
+        "🟣 <code>.uinfo</code> / <code>.scan</code>\n"
+        "🟣 <code>.dphist</code> · <code>.member</code>\n"
+        "🟣 <code>.fwdinfo</code> · <code>.commonlist</code>\n"
+        "🥭 <code>.dp</code> / <code>.mongodp</code>\n"
+        "🟣 <code>.dpsave</code> · <code>.dplog</code>"
     ),
     "cast": (
         "🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡\n"
         "📢 <b>BROADCAST</b>\n"
         "🟡🟡🟡🟡🟡🟡🟡🟡🟡🟡\n\n"
-        "🟡 <code>.broadcast</code> — all tracked chats\n"
-        "🟡 <code>.gcast</code> — groups only\n"
-        "🟡 <code>.dmcast</code> — private DMs only\n\n"
-        "💛 Reply + command → message copy"
+        "🟡 <code>.broadcast</code> — all chats\n"
+        "🟡 <code>.gcast</code> — groups\n"
+        "🟡 <code>.dmcast</code> — DMs"
     ),
     "bro": (
         "🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷\n"
         "💕 <b>BRO AUTO-REPLY</b>\n"
         "🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷\n\n"
-        "🩷 <code>.bro</code> — DM + GROUP\n"
-        "🩷 <code>.brodm</code> — sirf DM\n"
-        "🩷 <code>.brogroup</code> — sirf GROUP\n"
-        "🩷 <code>.unbro</code> — disable\n"
-        "🩷 <code>.brolist</code> — targets\n\n"
-        "💗 <i>200+ lines pool</i>"
+        "🩷 <code>.bro</code> · <code>.brodm</code>\n"
+        "🩷 <code>.brogroup</code> · <code>.unbro</code>\n"
+        "🩷 <code>.brolist</code>"
     ),
     "owner": (
         "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n"
         "👑 <b>OWNER / SUDO</b>\n"
         "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n\n"
         "🩵 <code>.addsudo</code> · <code>.delsudo</code>\n"
-        "🩵 <code>.sudolist</code>\n"
-        "🩵 <code>.clone</code> — clone profile\n"
-        "🩵 <code>.back</code> — restore profile\n"
-        "🩵 <code>.track</code> on/off\n"
-        "🩵 <code>.trackadd</code> · <code>.trackdel</code>\n"
-        "🩵 <code>.ghost</code> · <code>.secretlog</code>"
+        "🩵 <code>.sudolist</code> · <code>.clone</code>\n"
+        "🩵 <code>.track</code> · <code>.ghost</code>"
     ),
     "pm": (
         "🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡\n"
         "🛡 <b>PM GUARD</b>\n"
         "🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡\n\n"
         "🧡 <code>.approve</code> / <code>.unapprove</code>\n"
-        "🧡 <code>.antispam</code>\n"
-        "🧡 <code>.pmguard</code>\n"
-        "🧡 <code>.secretlog</code>"
+        "🧡 <code>.pmguard</code> · <code>.secretlog</code>"
     ),
     "eco": (
         "💚💚💚💚💚💚💚💚💚💚\n"
         "💰 <b>ECONOMY</b>\n"
         "💚💚💚💚💚💚💚💚💚💚\n\n"
-        "💚 <code>.bal</code> / <code>.balance</code>\n"
-        "💚 <code>.daily</code> — daily reward\n"
-        "💚 <code>.rob</code> — rob user\n"
-        "💚 <code>.pay</code> — transfer coins"
+        "💚 <code>.bal</code> · <code>.daily</code>\n"
+        "💚 <code>.rob</code> · <code>.pay</code>"
     ),
     "tools": (
         "🔵🔵🔵🔵🔵🔵🔵🔵🔵🔵\n"
-        "🛠 <b>TOOLS / UTILS</b>\n"
+        "🛠 <b>TOOLS</b>\n"
         "🔵🔵🔵🔵🔵🔵🔵🔵🔵🔵\n\n"
-        "🔵 <code>.afk</code> · <code>.info</code> · <code>.id</code>\n"
-        "🔵 <code>.notes</code> · <code>.filter</code>\n"
-        "🔵 <code>.qr</code> · <code>.paste</code>\n"
-        "🔵 <code>.telegraph</code> · <code>.stats</code>\n"
-        "🔵 <code>.kang</code> · <code>.download</code>"
+        "🔵 <code>.afk</code> · <code>.id</code> · <code>.info</code>\n"
+        "🔵 <code>.qr</code> · <code>.paste</code> · <code>.kang</code>"
     ),
     "system": (
         "⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️\n"
         "⚙️ <b>SYSTEM</b>\n"
         "⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️⚪️\n\n"
-        "⚪️ <code>.ping</code> — latency\n"
-        "⚪️ <code>.alive</code> — status\n"
-        "⚪️ <code>.help</code> / <code>.menu</code> — this menu\n"
-        "⚪️ <code>.cmds</code> — alias\n\n"
-        f"💎 Name: <b>{BOT_NAME or 'Yashika'}</b>\n"
-        "💎 Mode: <b>Pure Userbot</b>"
+        "⚪️ <code>.ping</code> · <code>.alive</code>\n"
+        "⚪️ <code>.help</code> / <code>.menu</code>\n"
+        f"💎 <b>{BOT_NAME or 'Yashika'}</b> · Pure Userbot"
     ),
     "deploy": (
         "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n"
-        "🚀 <b>DEPLOY ANYWHERE</b>\n"
+        "🚀 <b>DEPLOY</b>\n"
         "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀\n\n"
-        "🟢 Railway\n"
-        "🔵 Render\n"
-        "🟣 Heroku\n"
-        "🟡 Koyeb\n"
-        "⚪️ VPS / Local\n\n"
-        "🔑 ENV required:\n"
-        "<code>API_ID</code> <code>API_HASH</code>\n"
-        "<code>STRING_SESSION</code> <code>OWNER_ID</code>\n\n"
-        "▶️ Start: <code>python3 main.py</code>\n\n"
-        "👇 Platform buttons dabao"
+        "Railway · Render · Heroku · Koyeb\n\n"
+        "🔑 <code>API_ID</code> <code>API_HASH</code>\n"
+        "🔑 <code>STRING_SESSION</code> <code>OWNER_ID</code>"
     ),
 }
 
@@ -315,13 +282,12 @@ PAGE_COLOR = {
 
 async def _allowed(uid: int, client) -> bool:
     try:
-        from config import OWNER_ID
-        from modules.owner.sudoers import SUDO_USERS
-
-        if uid == OWNER_ID or uid in SUDO_USERS:
+        if OWNER_ID and uid == OWNER_ID:
+            return True
+        if uid in SUDO_USERS:
             return True
         me = await client.get_me()
-        return uid == me.id
+        return bool(me and uid == me.id)
     except Exception:
         return False
 
@@ -329,22 +295,40 @@ async def _allowed(uid: int, client) -> bool:
 async def _send_help(message: Message):
     caption = HOME_CAPTION
     markup = main_buttons()
+    # Prefer text first (most reliable); photo optional
+    try:
+        await message.reply_text(
+            caption, reply_markup=markup, disable_web_page_preview=True
+        )
+        return
+    except Exception as e:
+        print(f"[help] reply_text failed: {e}")
     photo = HELP_BANNER
     if START_PIC and str(START_PIC).startswith("http"):
         photo = START_PIC
     try:
         await message.reply_photo(photo, caption=caption, reply_markup=markup)
-        return
-    except Exception:
-        pass
-    await message.reply_text(
-        caption, reply_markup=markup, disable_web_page_preview=True
-    )
+    except Exception as e:
+        print(f"[help] reply_photo failed: {e}")
 
 
-@app.on_message(filters.command(["help", "cmds", "commands", "menu"], prefixes=PREFIXES))
+# Primary: command filter + sudo (outgoing always allowed in sudo_only)
+@app.on_message(
+    filters.command(["help", "cmds", "commands", "menu"], prefixes=PREFIXES)
+)
 @sudo_only
 async def help_cmd(client, message: Message):
+    await _send_help(message)
+
+
+# Backup: plain text match on own account (if command filter misses)
+@app.on_message(
+    filters.me
+    & filters.text
+    & filters.regex(r"^[.!](help|menu|cmds|commands)(@\w+)?(\s|$)"),
+    group=1,
+)
+async def help_cmd_backup(client, message: Message):
     await _send_help(message)
 
 
