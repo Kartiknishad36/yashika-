@@ -50,6 +50,7 @@ MODULES = [
     # Utils
     "modules.utils.basics",
     "modules.utils.info",
+    "modules.utils.user_scan",
     "modules.utils.fun",
     "modules.utils.afk",
     "modules.utils.protect",
@@ -100,7 +101,6 @@ for m in MODULES:
 
 
 async def track_chats():
-    """Track groups + private DMs so broadcast/gcast/dmcast have targets."""
     from pyrogram import filters
 
     @app.on_message(filters.group | filters.private, group=-1)
