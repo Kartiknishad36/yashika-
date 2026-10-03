@@ -1,7 +1,7 @@
 """
 Auth decorators — pure userbot
 
-sudo_only: me.id | OWNER_ID | SUDO_USERS
+sudo_only: outgoing (own cmds) | me.id | OWNER_ID | SUDO_USERS
 owner_or_sudo: OWNER_ID | sudo
 owner_only: OWNER_ID only
 """
@@ -25,45 +25,83 @@ async def load_sudoers():
             SUDO_USERS.add(uid)
     except Exception:
         pass
+    # always treat the running account as allowed once we know id
+    try:
+        me = await app.get_me()
+        if me:
+            SUDO_USERS.add(me.id)
+    except Exception:
+        pass
 
 
 def sudo_only(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
+        # Own account commands (userbot types .help) = always allow
+        if getattr(message, "outgoing", False):
+            return await func(client, message, *args, **kwargs)
+
         if not message.from_user:
             return
         uid = message.from_user.id
-        if uid == OWNER_ID or uid in SUDO_USERS:
+
+        if OWNER_ID and uid == OWNER_ID:
             return await func(client, message, *args, **kwargs)
+        if uid in SUDO_USERS:
+            return await func(client, message, *args, **kwargs)
+
         try:
             me = await client.get_me()
-            if uid == me.id:
+            if me and uid == me.id:
+                SUDO_USERS.add(me.id)
                 return await func(client, message, *args, **kwargs)
         except Exception:
-            return
+            pass
         return
+
     return wrapper
 
 
 def owner_or_sudo(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
+        if getattr(message, "outgoing", False):
+            return await func(client, message, *args, **kwargs)
         if not message.from_user:
             return
         uid = message.from_user.id
         if uid != OWNER_ID and uid not in SUDO_USERS:
+            try:
+                me = await client.get_me()
+                if me and uid == me.id:
+                    return await func(client, message, *args, **kwargs)
+            except Exception:
+                pass
             await message.reply_text("❌ Sirf OWNER / sudo.")
             return
         return await func(client, message, *args, **kwargs)
+
     return wrapper
 
 
 def owner_only(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
-        if not message.from_user or message.from_user.id != OWNER_ID:
+        if getattr(message, "outgoing", False):
+            return await func(client, message, *args, **kwargs)
+        if not message.from_user:
             return
-        return await func(client, message, *args, **kwargs)
+        uid = message.from_user.id
+        if OWNER_ID and uid == OWNER_ID:
+            return await func(client, message, *args, **kwargs)
+        try:
+            me = await client.get_me()
+            if me and uid == me.id:
+                return await func(client, message, *args, **kwargs)
+        except Exception:
+            pass
+        return
+
     return wrapper
 
 
