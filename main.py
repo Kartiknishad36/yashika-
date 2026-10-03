@@ -7,9 +7,8 @@ from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers
 
-# Pure USERBOT — no bot, no games, no animations
 MODULES = [
-    # ========== Owner / security ==========
+    # Owner / security
     "modules.owner.sudoers",
     "modules.owner.pmguard",
     "modules.owner.pm_extra",
@@ -19,11 +18,11 @@ MODULES = [
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
 
-    # ========== VC / Music ==========
+    # VC / Music
     "modules.vc.play",
     "modules.vc.controls",
 
-    # ========== Global mod ==========
+    # Global mod
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
     "modules.global_mod.gdel",
@@ -45,10 +44,10 @@ MODULES = [
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
 
-    # ========== Economy ==========
+    # Economy
     "modules.economy.basic",
 
-    # ========== Utils (core) ==========
+    # Utils
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.fun",
@@ -57,8 +56,6 @@ MODULES = [
     "modules.utils.notes",
     "modules.utils.voice",
     "modules.utils.nuinfo",
-
-    # ========== Utils (extra) ==========
     "modules.utils.system_cmds",
     "modules.utils.tools",
     "modules.utils.profile_set",
@@ -79,7 +76,6 @@ MODULES = [
     "modules.utils.paste_cmd",
     "modules.utils.reminder",
     "modules.utils.filters_words",
-    "modules.utils.shayari_extra",
     "modules.utils.qrcode_cmd",
     "modules.utils.stats_cmd",
     "modules.utils.setgroup",
@@ -88,8 +84,9 @@ MODULES = [
     "modules.utils.autojoin",
     "modules.utils.autoreply",
     "modules.utils.gclone",
+    "modules.utils.help_cmd",
 
-    # ========== Media ==========
+    # Media
     "modules.media.kang",
     "modules.media.download",
     "modules.media.social",
@@ -102,20 +99,25 @@ for m in MODULES:
         print(f"[Userbot] WARNING: could not load '{m}': {type(e).__name__}: {e}")
 
 
-async def track_new_chats():
+async def track_chats():
+    """Track groups + private DMs so broadcast/gcast/dmcast have targets."""
     from pyrogram import filters
 
-    @app.on_message(filters.group, group=-1)
+    @app.on_message(filters.group | filters.private, group=-1)
     async def _track(client, message):
         try:
-            await add_chat(message.chat.id, message.chat.title or "")
+            chat = message.chat
+            if not chat:
+                return
+            title = getattr(chat, "title", None) or getattr(chat, "first_name", None) or ""
+            await add_chat(chat.id, title)
         except Exception:
             pass
 
 
 async def main():
     await load_sudoers()
-    await track_new_chats()
+    await track_chats()
     register_trigger_autodelete(app)
 
     try:
@@ -132,9 +134,9 @@ async def main():
         try:
             await assistant.start()
             a_me = await assistant.get_me()
-            print(f"[Userbot] Assistant started as {a_me.first_name} (@{a_me.username or a_me.id})")
+            print(f"[Userbot] Assistant: {a_me.first_name} (@{a_me.username or a_me.id})")
         except Exception as e:
-            print(f"[Userbot] WARNING: assistant start failed: {e}")
+            print(f"[Userbot] WARNING: assistant failed: {e}")
 
     try:
         await ensure_started(app)
@@ -142,7 +144,7 @@ async def main():
     except Exception as e:
         print(f"[Userbot] WARNING: PyTgCalls failed: {e}")
 
-    print("[Userbot] Ready. All commands run on user account.")
+    print("[Userbot] Ready.")
     await asyncio.Event().wait()
 
 
