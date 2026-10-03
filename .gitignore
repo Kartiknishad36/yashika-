@@ -1,11 +1,49 @@
+# Secrets & env
 .env
-__pycache__/
-*.pyc
+.env.*
+!.env.example
 *.session
 *.session-journal
+cookies.txt
+*cookies*.txt
+credentials.json
+secret*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Runtime / data
 cache/
 downloads/
 storage.json
 logs.txt
-.venv/
-venv/
+*.log
+*.db
+*.sqlite3
+
+# Media temp
+*.mp3
+*.mp4
+*.webm
+*.mkv
+*.jpg
+*.jpeg
+*.png
+!assets/**
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Deploy artifacts
+nixpacks.toml.bak
