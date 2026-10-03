@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from core.clients import app, assistant
 from core.call_manager import ensure_started
+from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers, SUDO_USERS
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
@@ -134,6 +135,8 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
+    # Delete .cmd AFTER handlers reply (group=40)
+    register_trigger_autodelete(app)
 
     me = None
     try:
