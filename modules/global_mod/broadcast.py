@@ -1,33 +1,27 @@
 """
-Broadcast variants (OWNER / sudo only)
+Broadcast (OWNER / sudo only) — pure userbot
 
-Userbot (app):
-  .broadcast / .gcast   → saari tracked chats (groups + private jo list mein hain)
-  .dmcast               → sirf private / DM chats
-  .gcastonly            → alias nahi; .gcast = groups only
+  .broadcast [text]   → saari tracked chats (groups + DMs)
+  .gcast [text]       → sirf groups / supergroups
+  .dmcast [text]      → sirf private DMs
 
-Actually per request:
-  .dmcast   → sirf DM (private)
-  .gcast    → sirf groups
-  .broadcast → mixed / all tracked (messages everywhere)
-
-Bot client:
-  /broadcast /gcast /dmcast — same logic, prefixes /
+Reply kisi message pe + command → us message ko copy karke bhejo.
+Tracked list = storage.json chats (groups auto-track; DM tab add jab koi
+private message aaye — main.py tracker).
 """
 import asyncio
 import functools
 
 from pyrogram import filters
 from pyrogram.types import Message
-from pyrogram.errors import RPCError, FloodWait
+from pyrogram.errors import RPCError, FloodWait, PeerIdInvalid, UserIsBlocked, ChatWriteForbidden
 from pyrogram.enums import ChatType
 
-from core.clients import app, bot
+from core.clients import app
 from config import OWNER_ID
 from database.mongo import get_all_chats, get_sudoers
 
-PREFIX_UB = [".", "!"]
-PREFIX_BOT = ["/"]
+PREFIXES = [".", "!"]
 
 
 async def _allowed(user_id: int) -> bool:
@@ -53,16 +47,13 @@ def owner_or_sudo(func):
         if not message.from_user:
             return
         if not await _allowed(message.from_user.id):
-            await message.reply_text(
-                "❌ Sirf OWNER / sudo is command ko use kar sakte hain."
-            )
+            await message.reply_text("❌ Sirf OWNER / sudo use kar sakte hain.")
             return
         return await func(client, message, *args, **kwargs)
     return wrapper
 
 
-async def _classify_chats(client, chat_ids: list[int]) -> tuple[list[int], list[int]]:
-    """Returns (groups, dms). Unknown/fail → skip."""
+async def _classify_chats(client, chat_ids: list) -> tuple:
     groups, dms = [], []
     for cid in chat_ids:
         try:
@@ -73,8 +64,7 @@ async def _classify_chats(client, chat_ids: list[int]) -> tuple[list[int], list[
             elif t == ChatType.PRIVATE:
                 dms.append(cid)
         except Exception:
-            # heuristic: negative = group/channel-ish, positive private
-            if cid < 0:
+            if isinstance(cid, int) and cid < 0:
                 groups.append(cid)
             else:
                 dms.append(cid)
@@ -82,25 +72,23 @@ async def _classify_chats(client, chat_ids: list[int]) -> tuple[list[int], list[
 
 
 async def _do_broadcast(client, message: Message, mode: str = "all"):
-    """
-    mode: all | groups | dms
-    """
     if not message.reply_to_message and len(message.command) < 2:
         await message.reply_text(
             "📢 <b>Broadcast</b>\n"
             "━━━━━━━━━━━━━━\n"
-            "<code>.broadcast text</code> — sab tracked chats\n"
-            "<code>.gcast text</code> — <b>sirf groups</b>\n"
-            "<code>.dmcast text</code> — <b>sirf DMs</b>\n"
-            "Ya kisi msg pe <b>reply</b> + command\n"
-            "Bot: <code>/broadcast</code> <code>/gcast</code> <code>/dmcast</code>"
+            "<code>.broadcast text</code> — sab tracked\n"
+            "<code>.gcast text</code> — sirf <b>groups</b>\n"
+            "<code>.dmcast text</code> — sirf <b>DMs</b>\n"
+            "Ya kisi msg pe <b>reply</b> + command\n\n"
+            "Tip: pehle groups/DM me activity chahiye taaki list bane."
         )
         return
 
     chats = await get_all_chats()
     if not chats:
         await message.reply_text(
-            "Koi tracked chat nahi. Pehle groups/DM mein activity chahiye."
+            "❌ Koi tracked chat nahi.\n"
+            "Pehle kuch groups me message aane do, ya kisi se DM exchange karo."
         )
         return
 
@@ -115,7 +103,10 @@ async def _do_broadcast(client, message: Message, mode: str = "all"):
         label = "all chats"
 
     if not targets:
-        await message.reply_text(f"Koi {label} target nahi mila.")
+        await message.reply_text(
+            f"❌ Koi <b>{label}</b> target nahi.\n"
+            f"Total tracked: <code>{len(chats)}</code>"
+        )
         return
 
     status = await message.reply_text(
@@ -135,63 +126,44 @@ async def _do_broadcast(client, message: Message, mode: str = "all"):
                 await client.send_message(chat_id, text)
             sent += 1
         except FloodWait as e:
-            await asyncio.sleep(e.value + 1)
+            await asyncio.sleep(min(e.value, 30) + 1)
             try:
                 if message.reply_to_message:
                     await message.reply_to_message.copy(chat_id)
                 else:
                     await client.send_message(chat_id, text)
                 sent += 1
-            except RPCError:
+            except Exception:
                 failed += 1
-        except RPCError:
+        except (PeerIdInvalid, UserIsBlocked, ChatWriteForbidden, RPCError):
             failed += 1
         except Exception:
             failed += 1
-        await asyncio.sleep(0.15)
+        await asyncio.sleep(0.2)
 
     try:
         await status.edit_text(
             f"📢 <b>Done</b> ({label})\n"
-            f"Sent: <b>{sent}</b> | Failed: <b>{failed}</b>"
+            f"✅ Sent: <b>{sent}</b>\n"
+            f"❌ Failed: <b>{failed}</b>"
         )
     except Exception:
         pass
 
 
-# ---------- USERBOT ----------
-@app.on_message(filters.command(["broadcast"], prefixes=PREFIX_UB))
+@app.on_message(filters.command(["broadcast"], prefixes=PREFIXES))
 @owner_or_sudo
-async def broadcast_all_app(client, message: Message):
+async def broadcast_all(client, message: Message):
     await _do_broadcast(client, message, mode="all")
 
 
-@app.on_message(filters.command(["gcast"], prefixes=PREFIX_UB))
+@app.on_message(filters.command(["gcast"], prefixes=PREFIXES))
 @owner_or_sudo
-async def broadcast_groups_app(client, message: Message):
+async def broadcast_groups(client, message: Message):
     await _do_broadcast(client, message, mode="groups")
 
 
-@app.on_message(filters.command(["dmcast"], prefixes=PREFIX_UB))
+@app.on_message(filters.command(["dmcast"], prefixes=PREFIXES))
 @owner_or_sudo
-async def broadcast_dms_app(client, message: Message):
+async def broadcast_dms(client, message: Message):
     await _do_broadcast(client, message, mode="dms")
-
-
-# ---------- BOT ----------
-if bot is not None:
-
-    @bot.on_message(filters.command(["broadcast"], prefixes=PREFIX_BOT))
-    @owner_or_sudo
-    async def broadcast_all_bot(client, message: Message):
-        await _do_broadcast(client, message, mode="all")
-
-    @bot.on_message(filters.command(["gcast"], prefixes=PREFIX_BOT))
-    @owner_or_sudo
-    async def broadcast_groups_bot(client, message: Message):
-        await _do_broadcast(client, message, mode="groups")
-
-    @bot.on_message(filters.command(["dmcast"], prefixes=PREFIX_BOT))
-    @owner_or_sudo
-    async def broadcast_dms_bot(client, message: Message):
-        await _do_broadcast(client, message, mode="dms")
