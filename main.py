@@ -59,7 +59,6 @@ MODULES = [
     "modules.utils.afk",
     "modules.utils.protect",
     "modules.utils.notes",
-    "modules.utils.voice",
     "modules.utils.nuinfo",
     "modules.utils.system_cmds",
     "modules.utils.tools",
@@ -107,23 +106,20 @@ for m in MODULES:
 async def track_chats():
     from pyrogram import filters
 
-    # group=-1 runs BEFORE command handlers (group=0).
-    # MUST continue_propagation — warna koi bhi .help/.menu/.ping fire nahi hota!
-    @app.on_message(filters.group | filters.private, group=-1)
+    # group=50 → AFTER command handlers (group=0).
+    # Commands first, then chat tracking. No propagation issues.
+    @app.on_message(filters.group | filters.private, group=50)
     async def _track(client, message):
         try:
             chat = message.chat
-            if chat:
-                title = (
-                    getattr(chat, "title", None)
-                    or getattr(chat, "first_name", None)
-                    or ""
-                )
-                await add_chat(chat.id, title)
-        except Exception:
-            pass
-        try:
-            message.continue_propagation()
+            if not chat:
+                return
+            title = (
+                getattr(chat, "title", None)
+                or getattr(chat, "first_name", None)
+                or ""
+            )
+            await add_chat(chat.id, title)
         except Exception:
             pass
 
@@ -140,7 +136,8 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
-    register_trigger_autodelete(app)
+    # Autodelete OFF for now — was confusing (cmd delete, no reply visible)
+    # register_trigger_autodelete(app)
 
     me = None
     try:
@@ -150,6 +147,7 @@ async def main():
         if OWNER_ID:
             SUDO_USERS.add(OWNER_ID)
         print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
+        print(f"[Userbot] SUDO_USERS={sorted(SUDO_USERS)}")
     except Exception as e:
         print(f"[Userbot] FATAL: start failed: {e}")
         raise
@@ -165,7 +163,7 @@ async def main():
         f"🆔 ID: <code>{me.id}</code>\n"
         f"💎 Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
         f"⏱ Time: <code>{now}</code>\n\n"
-        f"📌 Try: <code>.help</code> <code>.menu</code> <code>.ping</code>"
+        f"📌 Try: <code>.help</code> <code>.menu</code> <code>.ping</code> <code>.rose</code>"
     )
 
     await asyncio.sleep(1)
@@ -182,8 +180,7 @@ async def main():
                 "🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵\n\n"
                 f"🎧 Name: <b>{a_me.first_name}</b>\n"
                 f"🔗 Username: {a_un}\n"
-                f"🆔 ID: <code>{a_me.id}</code>\n"
-                f"⏱ Time: <code>{now}</code>"
+                f"🆔 ID: <code>{a_me.id}</code>"
             )
         except Exception as e:
             print(f"[Userbot] WARNING: assistant failed: {e}")
@@ -191,28 +188,22 @@ async def main():
                 f"⚠️ <b>ASSISTANT FAILED</b>\n<code>{type(e).__name__}: {e}</code>"
             )
     else:
-        await _notify_log(
-            "⚪️ <b>ASSISTANT</b>: not set\n"
-            "(optional: <code>ASSISTANT_SESSION</code>)"
-        )
+        await _notify_log("⚪️ <b>ASSISTANT</b>: not set")
 
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls started.")
-        await _notify_log("🎵 <b>PyTgCalls</b> · VC engine ready")
+        await _notify_log("🎵 <b>PyTgCalls</b> ready")
     except Exception as e:
         print(f"[Userbot] WARNING: PyTgCalls failed: {e}")
-        await _notify_log(
-            f"⚠️ <b>PyTgCalls failed</b>\n<code>{type(e).__name__}: {e}</code>"
-        )
 
     print("[Userbot] Ready.")
     await _notify_log(
         "✨━━━━━━━━━━━━━━━━━━✨\n"
         f"💜 <b>{BOT_NAME or 'Yashika'} READY</b>\n"
         "✨━━━━━━━━━━━━━━━━━━✨\n\n"
-        "Commands online.\n"
-        "<code>.help</code> · <code>.menu</code> · <code>.ping</code>"
+        "<code>.help</code> · <code>.menu</code> · <code>.ping</code>\n"
+        "<code>.rose</code> · <code>.cat</code> · <code>.heart</code>"
     )
     await asyncio.Event().wait()
 
