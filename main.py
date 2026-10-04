@@ -7,7 +7,7 @@ from core.clients import app
 from core.call_manager import ensure_started
 from core.autodelete import register_trigger_autodelete
 from database.mongo import add_chat
-from modules.owner.sudoers import load_sudoers, SUDO_USERS
+from modules.owner.sudoers import load_sudoers, SUDO_USERS, set_me_id
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 
 MODULES = [
@@ -71,6 +71,8 @@ MODULES = [
     "modules.utils.telegraph",
     "modules.utils.autojoin",
     "modules.utils.autoreply",
+    "modules.utils.spy_pack",
+    "modules.utils.voice",
 
     "modules.media.kang",
     "modules.media.download",
@@ -121,17 +123,18 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
-    # OFF — delete se command ignore lagti thi
-    register_trigger_autodelete(app, enabled=False)
+    # ON — 4s baad command message delete (reply pehle aayega)
+    register_trigger_autodelete(app, enabled=True)
 
     try:
         await app.start()
         me = await app.get_me()
-        SUDO_USERS.add(me.id)
+        set_me_id(me.id)
         if OWNER_ID:
             SUDO_USERS.add(OWNER_ID)
         print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
         print(f"[Userbot] SUDO={sorted(SUDO_USERS)}")
+        print(f"[Userbot] ME_ID={me.id}")
     except Exception as e:
         print(f"[Userbot] FATAL: {e}")
         raise
@@ -158,7 +161,10 @@ async def main():
         print(f"[Userbot] PyTgCalls: {e}")
 
     print("[Userbot] Ready — type .ping or .help")
-    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>\n<code>.help</code> <code>.ping</code>")
+    await _notify_log(
+        f"<b>{BOT_NAME or 'Yashika'} READY</b>\n"
+        f"<code>.help</code> <code>.ping</code> <code>.rose</code>"
+    )
     await asyncio.Event().wait()
 
 
