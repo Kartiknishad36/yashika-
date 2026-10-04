@@ -1,19 +1,25 @@
 """
-Command message auto-delete — AFTER handlers reply.
+Command auto-delete — DISABLED by default.
 
-Group 40 = commands (group 0) pehle chalenge, phir trigger delete.
-Bot/userbot ka reply message delete nahi hota.
+Pehle command reply aane do; delete se lagta tha command ignore ho rahi hai
+(especially FloodWait pe).
+
+Enable later: register_trigger_autodelete(app, enabled=True)
 """
 import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-DELETE_DELAY = 1.0  # reply aane ke baad thoda wait
+DELETE_DELAY = 3.0
 
 
-def register_trigger_autodelete(app):
+def register_trigger_autodelete(app, enabled: bool = False):
+    if not enabled:
+        print("[autodelete] OFF (commands will not auto-delete)")
+        return
+
     @app.on_message(
-        filters.text & filters.regex(r"^[.!]\w"),
+        filters.me & filters.text & filters.regex(r"^[.!]\w"),
         group=40,
     )
     async def _delete_trigger(client, message: Message):
@@ -25,3 +31,5 @@ def register_trigger_autodelete(app):
                 pass
 
         asyncio.create_task(_task())
+
+    print("[autodelete] ON — delay", DELETE_DELAY, "s")
