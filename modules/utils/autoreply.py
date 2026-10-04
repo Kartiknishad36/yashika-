@@ -1,58 +1,48 @@
-"""
-Auto-reply — per chat only.
-
-  .autoreply on     → is DM/group me ON
-  .autoreply off    → is chat me OFF
-  .autoreply set <text>
-  .autoreply        → status is chat ka
-"""
+"""Auto-reply — per chat only."""
 import time
 
 from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd
 from database.mongo import get_chat_flag, set_chat_flag
 
-PREFIXES = [".", "!"]
 DEFAULT_TEXT = "I am busy right now, will reply later."
 COOLDOWN = 20
 _LAST: dict[tuple[int, int], float] = {}
 
 
-@app.on_message(filters.command("autoreply", prefixes=PREFIXES))
-@sudo_only
+@app.on_message(ub_cmd("autoreply") & filters.me)
 async def autoreply_cmd(client, message: Message):
     chat_id = message.chat.id
-    if len(message.command) < 2:
+    parts = (message.text or "").split(None, 2)
+    if len(parts) < 2:
         on = bool(await get_chat_flag(chat_id, "autoreply", False))
         text = await get_chat_flag(chat_id, "autoreply_text", DEFAULT_TEXT)
         await message.reply_text(
-            f"**AutoReply** this chat: **{'ON' if on else 'OFF'}**\n"
-            f"Text: `{text}`\n\n"
-            f"`.autoreply on` / `.autoreply off`\n"
-            f"`.autoreply set your message`"
+            f"<b>AutoReply</b> this chat: <b>{'ON' if on else 'OFF'}</b>\n"
+            f"Text: <code>{text}</code>\n\n"
+            f"<code>.autoreply on</code> / <code>.autoreply off</code>\n"
+            f"<code>.autoreply set your message</code>"
         )
         return
-
-    arg = message.command[1].lower()
+    arg = parts[1].lower()
     if arg in ("on", "enable", "1"):
         await set_chat_flag(chat_id, "autoreply", True)
-        await message.reply_text("**AutoReply ON** — only this chat.")
+        await message.reply_text("<b>AutoReply ON</b> — only this chat.")
         return
     if arg in ("off", "disable", "0"):
         await set_chat_flag(chat_id, "autoreply", False)
-        await message.reply_text("**AutoReply OFF** — this chat.")
+        await message.reply_text("<b>AutoReply OFF</b> — this chat.")
         return
-    if arg == "set" and len(message.command) > 2:
-        text = message.text.split(None, 2)[2][:500]
+    if arg == "set" and len(parts) > 2:
+        text = parts[2][:500]
         await set_chat_flag(chat_id, "autoreply_text", text)
         await set_chat_flag(chat_id, "autoreply", True)
-        await message.reply_text(f"Saved + ON:\n`{text}`")
+        await message.reply_text(f"Saved + ON:\n<code>{text}</code>")
         return
-
-    await message.reply_text("Usage: `.autoreply on|off|set <text>`")
+    await message.reply_text("Usage: <code>.autoreply on|off|set text</code>")
 
 
 @app.on_message(
@@ -69,18 +59,15 @@ async def auto_replier(client, message: Message):
         return
     if not on:
         return
-
     text0 = message.text or message.caption or ""
     if text0.startswith((".", "!", "/")):
         return
-
     uid = message.from_user.id
     key = (chat_id, uid)
     now = time.time()
     if now - _LAST.get(key, 0) < COOLDOWN:
         return
     _LAST[key] = now
-
     try:
         reply_text = await get_chat_flag(chat_id, "autoreply_text", DEFAULT_TEXT)
         await message.reply_text(str(reply_text or DEFAULT_TEXT))
