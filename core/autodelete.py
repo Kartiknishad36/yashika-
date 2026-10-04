@@ -1,21 +1,17 @@
 """
-Command auto-delete — DISABLED by default.
-
-Pehle command reply aane do; delete se lagta tha command ignore ho rahi hai
-(especially FloodWait pe).
-
-Enable later: register_trigger_autodelete(app, enabled=True)
+Command auto-delete — deletes YOUR .cmd message after delay.
+Reply message stays. Delay 4s so reply pehle aa jaye.
 """
 import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-DELETE_DELAY = 3.0
+DELETE_DELAY = 4.0
 
 
-def register_trigger_autodelete(app, enabled: bool = False):
+def register_trigger_autodelete(app, enabled: bool = True):
     if not enabled:
-        print("[autodelete] OFF (commands will not auto-delete)")
+        print("[autodelete] OFF")
         return
 
     @app.on_message(
@@ -32,4 +28,4 @@ def register_trigger_autodelete(app, enabled: bool = False):
 
         asyncio.create_task(_task())
 
-    print("[autodelete] ON — delay", DELETE_DELAY, "s")
+    print(f"[autodelete] ON — delay {DELETE_DELAY}s")
