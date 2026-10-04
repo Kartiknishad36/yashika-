@@ -9,23 +9,26 @@ from pyrogram.types import Message
 
 from core.clients import app
 from config import BOT_NAME
-from modules.owner.sudoers import ub_cmd
+from modules.owner.sudoers import ub_cmd, sudo_only
 
 NAME = BOT_NAME or "Yashika"
 
 
-@app.on_message(ub_cmd("ping") & filters.me)
+@app.on_message(ub_cmd("ping"))
+@sudo_only
 async def ping_cmd(client, message: Message):
     start = time.time()
     try:
         msg = await message.reply_text("🏓 Pinging…")
         ms = (time.time() - start) * 1000
         await msg.edit_text(f"🏓 <b>Pong!</b> <code>{ms:.2f}ms</code>")
+        print("[ping] OK")
     except Exception as e:
         print(f"[ping] {e}")
 
 
-@app.on_message(ub_cmd("alive") & filters.me)
+@app.on_message(ub_cmd("alive"))
+@sudo_only
 async def alive_cmd(client, message: Message):
     try:
         await message.reply_text(
@@ -37,7 +40,8 @@ async def alive_cmd(client, message: Message):
         print(f"[alive] {e}")
 
 
-@app.on_message(ub_cmd("id") & filters.me)
+@app.on_message(ub_cmd("id"))
+@sudo_only
 async def id_cmd(client, message: Message):
     chat_id = message.chat.id if message.chat else 0
     user_id = (
@@ -55,47 +59,43 @@ async def id_cmd(client, message: Message):
         print(f"[id] {e}")
 
 
-# ===================== PREMIUM HELP =====================
-
-HELP_INDEX = f"""
-╔══════════════════════╗
-║ 👑 <b>YASHIKA COMMAND CENTER</b> ║
-╚══════════════════════╝
-✨ <i>Premium Hybrid Userbot</i>
-🏷 <b>{NAME}</b>
-━━━━━━━━━━━━━━━━━━━━
-
-🎵 <b>01 MUSIC/VC</b> — <code>.help vc</code>
-👑 <b>02 OWNER</b> — <code>.help owner</code>
-🔑 <b>03 LOGIN</b> — <code>.help login</code>
-🛡 <b>04 PM SEC</b> — <code>.help pmsec</code>
-🌐 <b>05 GLOBAL</b> — <code>.help global</code>
-👮 <b>06 MOD</b> — <code>.help mod</code>
-🔗 <b>07 ANTI</b> — <code>.help anti</code>
-⚠️ <b>08 WARN</b> — <code>.help warn</code>
-📢 <b>09 CAST</b> — <code>.help cast</code>
-🔥 <b>10 RAID</b> — <code>.help raid</code>
-💕 <b>11 BRO/SHA</b> — <code>.help bro</code>
-👋 <b>12 WELCOME</b> — <code>.help welcome</code>
-💤 <b>13 AFK</b> — <code>.help afk</code>
-🔒 <b>14 PROTECT</b> — <code>.help protect</code>
-📌 <b>15 NOTES</b> — <code>.help notes</code>
-📥 <b>16 DL</b> — <code>.help dl</code>
-🎨 <b>17 MEDIA</b> — <code>.help media</code>
-👁 <b>18 GHOST/TRACK</b> — <code>.help ghost</code>
-🧹 <b>19 TOOLS</b> — <code>.help tools</code>
-🎬 <b>20 ANIMS</b> — <code>.help anims</code>
-🌸 <b>21 FLOWERS</b> — <code>.help flowers</code>
-💑 <b>22 GF-BF</b> — <code>.help gbf</code>
-🕵️ <b>23 SPY</b> — <code>.help spy</code>
-⚙️ <b>24 SYSTEM</b> — <code>.help system</code>
-🎮 <b>25 GAMES/ECO</b> — <code>.help fun</code>
-🤖 <b>26 AI</b> — <code>.help ai</code>
-
-━━━━━━━━━━━━━━━━━━━━
-📌 <code>.help <name></code> · <code>.helpanim</code>
-👑 YASHIKA — Your Rules
-"""
+HELP_INDEX = (
+    "╔══════════════════════╗\n"
+    "║ 👑 <b>YASHIKA COMMAND CENTER</b> ║\n"
+    "╚══════════════════════╝\n"
+    f"✨ <i>Premium Hybrid Userbot</i>\n"
+    f"🏷 <b>{NAME}</b>\n"
+    "━━━━━━━━━━━━━━━━━━━━\n\n"
+    "🎵 <b>01 MUSIC/VC</b> — <code>.help vc</code>\n"
+    "👑 <b>02 OWNER</b> — <code>.help owner</code>\n"
+    "🔑 <b>03 LOGIN</b> — <code>.help login</code>\n"
+    "🛡 <b>04 PM SEC</b> — <code>.help pmsec</code>\n"
+    "🌐 <b>05 GLOBAL</b> — <code>.help global</code>\n"
+    "👮 <b>06 MOD</b> — <code>.help mod</code>\n"
+    "🔗 <b>07 ANTI</b> — <code>.help anti</code>\n"
+    "⚠️ <b>08 WARN</b> — <code>.help warn</code>\n"
+    "📢 <b>09 CAST</b> — <code>.help cast</code>\n"
+    "🔥 <b>10 RAID</b> — <code>.help raid</code>\n"
+    "💕 <b>11 BRO/SHA</b> — <code>.help bro</code>\n"
+    "👋 <b>12 WELCOME</b> — <code>.help welcome</code>\n"
+    "💤 <b>13 AFK</b> — <code>.help afk</code>\n"
+    "🔒 <b>14 PROTECT</b> — <code>.help protect</code>\n"
+    "📌 <b>15 NOTES</b> — <code>.help notes</code>\n"
+    "📥 <b>16 DL</b> — <code>.help dl</code>\n"
+    "🎨 <b>17 MEDIA</b> — <code>.help media</code>\n"
+    "👁 <b>18 GHOST/TRACK</b> — <code>.help ghost</code>\n"
+    "🧹 <b>19 TOOLS</b> — <code>.help tools</code>\n"
+    "🎬 <b>20 ANIMS</b> — <code>.help anims</code>\n"
+    "🌸 <b>21 FLOWERS</b> — <code>.help flowers</code>\n"
+    "💑 <b>22 GF-BF</b> — <code>.help gbf</code>\n"
+    "🕵️ <b>23 SPY</b> — <code>.help spy</code>\n"
+    "⚙️ <b>24 SYSTEM</b> — <code>.help system</code>\n"
+    "🎮 <b>25 GAMES/ECO</b> — <code>.help fun</code>\n"
+    "🤖 <b>26 AI</b> — <code>.help ai</code>\n\n"
+    "━━━━━━━━━━━━━━━━━━━━\n"
+    "📌 <code>.help page</code> · <code>.helpanim</code>\n"
+    "👑 YASHIKA — Your Rules"
+)
 
 HELP_PAGES = {
     "vc": (
@@ -110,8 +110,7 @@ HELP_PAGES = {
         "<code>.addsudo .delsudo .sudolist</code>\n"
         "<code>.approve .unapprove .approved</code>\n"
         "<code>.clone .back .clonemode</code>\n"
-        "<code>.setname .setbio .setpfp .delpfp</code>\n"
-        "<code>.block .unblock</code>"
+        "<code>.setname .setbio .setpfp .delpfp</code>"
     ),
     "login": (
         "🔑 <b>LOGIN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -121,8 +120,7 @@ HELP_PAGES = {
     "pmsec": (
         "🛡 <b>PM SECURITY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "<code>.antispam on/off .pmlog on/off</code>\n"
-        "<code>.secretlog on/off .verify</code>\n"
-        "Auto warn → block (3x) + group verify"
+        "<code>.secretlog on/off .verify</code>"
     ),
     "global": (
         "🌐 <b>GLOBAL MOD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -132,18 +130,13 @@ HELP_PAGES = {
     "mod": (
         "👮 <b>CHAT MOD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "<code>.ban .unban .kick .mute .unmute</code>\n"
-        "<code>.banall .kickall .muteall .unmuteall</code>\n"
         "<code>.promote .demote .pin .unpin</code>\n"
-        "<code>.tagall .tagallstop .tagme .tagadmins</code>\n"
-        "<code>.invitelink .zombies clean .autokick</code>\n"
-        "<code>.lock .unlock .nightmode .slowmode</code>\n"
-        "<code>.setrules .rules .clearrules</code>\n"
-        "<code>.setgrouppic .setgrouptitle .setgroupdesc</code>"
+        "<code>.tagall .tagallstop .zombies</code>\n"
+        "<code>.lock .unlock .nightmode .slowmode</code>"
     ),
     "anti": (
         "🔗 <b>ANTI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.antilink on/off .antibot on/off</code>\n"
-        "<code>.antidelete on/off .antilinkstatus</code>\n"
+        "<code>.antilink on/off .antidelete on/off</code>\n"
         "<code>.antiflood on 5 60</code>"
     ),
     "warn": (
@@ -152,9 +145,9 @@ HELP_PAGES = {
     ),
     "cast": (
         "📢 <b>BROADCAST</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.broadcast</code> — all tracked\n"
-        "<code>.gcast</code> — groups only\n"
-        "<code>.dmcast</code> — DMs only"
+        "<code>.broadcast</code> — all\n"
+        "<code>.gcast</code> — groups\n"
+        "<code>.dmcast</code> — DMs"
     ),
     "raid": (
         "🔥 <b>RAID / SPAM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -163,10 +156,8 @@ HELP_PAGES = {
     ),
     "bro": (
         "💕 <b>BRO / SHAYARI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.bro .brodm .brogroup .broall .unbro .brolist</code>\n"
-        "<code>.sha .love .sad .attitude .dard</code>\n"
-        "<code>.friendship .motivational</code>\n"
-        "<code>.goodmorning .goodnight</code>"
+        "<code>.bro .brodm .brogroup .unbro .brolist</code>\n"
+        "<code>.sha .love .sad .attitude</code>"
     ),
     "welcome": (
         "👋 <b>WELCOME</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -175,17 +166,15 @@ HELP_PAGES = {
     ),
     "afk": (
         "💤 <b>AFK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.afk [reason] .unafk .back .afkstatus</code>"
+        "<code>.afk [reason] .unafk .back</code>"
     ),
     "protect": (
         "🔒 <b>PROTECT</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.protect on/off</code> · reply+protect\n"
-        "<code>.psend .pfile</code>"
+        "<code>.protect on/off</code>"
     ),
     "notes": (
         "📌 <b>NOTES</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.save .get .notes .clearnote .clearallnotes</code>\n"
-        "<code>#name</code>"
+        "<code>.save .get .notes .clearnote</code>"
     ),
     "dl": (
         "📥 <b>DOWNLOAD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -194,82 +183,62 @@ HELP_PAGES = {
     ),
     "media": (
         "🎨 <b>MEDIA</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.kang .steal .tts .stt .tg .tgmode</code>\n"
-        "<code>.nuinfo .qr .paste .captiongen .secretlink</code>\n"
+        "<code>.kang .tts .tg .qr .paste</code>\n"
         "<code>.dp .dpsave .dplog .dpclear</code>"
     ),
     "ghost": (
         "👁 <b>GHOST / TRACK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ghostmod .ghost .ghostview .vanish</code>\n"
-        "<code>.track .trackadd .trackdel .tracklist</code>\n"
-        "<code>.profiletrack on/off/list</code>\n"
-        "<code>.secretlog .pmlog</code>"
+        "<code>.ghostmod .vanish .track .tracklist</code>\n"
+        "<code>.secretlog</code>"
     ),
     "tools": (
         "🛠 <b>TOOLS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.calc .time .weather .translate .tr .short</code>\n"
-        "<code>.remind 10m text .filter add x | y</code>\n"
-        "<code>.autobio .autojoin .join .leave</code>\n"
-        "<code>.autoreply .gclone .idbackup</code>\n"
-        "<code>.leadsaver .leads .followup</code>\n"
-        "<code>.copycap .hashtaggen .fakelocation</code>\n"
-        "<code>.del .purge .msginfo .idtouser .usertoid</code>"
+        "<code>.calc .time .weather .tr .short</code>\n"
+        "<code>.remind .autoreply .autojoin</code>\n"
+        "<code>.del .purge</code>"
     ),
     "anims": (
         "🎬 <b>ANIMATIONS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "<code>.hack .moon .loveanim .type .loading</code>\n"
-        "<code>.boom .heartbeat .party .congo .birthday</code>\n"
-        "<code>.animlist</code> — full list"
+        "<code>.boom .heartbeat .party</code>"
     ),
     "flowers": (
-        "🌸 <b>FLOWERS 50+</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.rose .lotus .gulab .sunflower .propose</code>\n"
-        "<code>.bouquet .flowerrain .rosefall</code>\n"
-        "<code>.cat .heart .hacker</code>"
+        "🌸 <b>FLOWERS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+        "<code>.rose .cat .heart .hacker</code>"
     ),
     "gbf": (
         "💑 <b>GF-BF</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.propose .iloveu .rainbow .lovecalc</code>\n"
-        "<code>.sorry .manau .missu .ring .heartlock</code>"
+        "<code>.propose .iloveu .sorry .missu</code>"
     ),
     "spy": (
-        "🕵️ <b>SPY PACK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.whois .spy .profile .picspy .flagspy</code>\n"
-        "<code>.mutual .msgspy .chattrace</code>\n"
-        "<code>.uinfo .scan</code>\n"
-        "<code>.spylist .darklist</code>"
+        "🕵️ <b>SPY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+        "<code>.whois .spy .uinfo .scan</code>"
     ),
     "system": (
         "⚙️ <b>SYSTEM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ping .alive .id .info .help .helpanim</code>\n"
-        "<code>.uptime .about .version .stats</code>\n"
-        "<code>.restart .shutdown .logs</code>"
+        "<code>.ping .alive .id .help .helpanim</code>\n"
+        "<code>.uptime .about .restart .logs</code>"
     ),
     "fun": (
-        "🎮 <b>GAMES / ECO / FUN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.joke .quote .roast .fact .pickup</code>\n"
-        "<code>.bal .daily .rob</code>"
+        "🎮 <b>FUN / ECO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
+        "<code>.joke .quote .roast .bal .daily</code>"
     ),
     "ai": (
         "🤖 <b>AI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "AI modules optional / disabled for speed.\n"
-        "Use <code>.help</code> for main menu."
+        "Optional / disabled for speed."
     ),
 }
 
-# aliases
 HELP_PAGES["antilink"] = HELP_PAGES["anti"]
 HELP_PAGES["broadcast"] = HELP_PAGES["cast"]
 HELP_PAGES["utility"] = HELP_PAGES["system"]
 HELP_PAGES["sha"] = HELP_PAGES["bro"]
 HELP_PAGES["track"] = HELP_PAGES["ghost"]
-HELP_PAGES["nuinfo"] = HELP_PAGES["media"]
-HELP_PAGES["chat"] = HELP_PAGES["tools"]
 HELP_PAGES["eco"] = HELP_PAGES["fun"]
-HELP_PAGES["menu"] = None  # use index
 
 
-@app.on_message(ub_cmd("help", "menu", "cmds", "commands") & filters.me)
+@app.on_message(ub_cmd("help", "menu", "cmds", "commands"))
+@sudo_only
 async def help_cmd(client, message: Message):
     parts = (message.text or "").split()
     try:
@@ -278,8 +247,7 @@ async def help_cmd(client, message: Message):
             page = HELP_PAGES.get(key)
             if not page:
                 await message.reply_text(
-                    f"❌ No page: <code>{key}</code>\n"
-                    f"<code>.help</code> for menu."
+                    f"❌ No page: <code>{key}</code>\n<code>.help</code> for menu."
                 )
                 return
             await message.reply_text(page)
@@ -294,31 +262,28 @@ async def help_cmd(client, message: Message):
             print(f"[help2] {e2}")
 
 
-@app.on_message(ub_cmd("helpanim") & filters.me)
+@app.on_message(ub_cmd("helpanim"))
+@sudo_only
 async def helpanim_cmd(client, message: Message):
     frames = [
         "✨",
         "✨👑",
         "👑 <b>YASHIKA</b>",
         "👑 <b>YASHIKA</b>\n💎 Premium",
-        "👑 <b>YASHIKA</b>\n💎 Premium\n📜 Loading commands…",
+        "👑 <b>YASHIKA</b>\n💎 Premium\n📜 Loading…",
     ]
     try:
         msg = await message.reply_text(frames[0])
         for f in frames[1:]:
-            await asyncio.sleep(0.45)
+            await asyncio.sleep(0.4)
             try:
                 await msg.edit_text(f)
             except Exception:
                 break
-        await asyncio.sleep(0.4)
+        await asyncio.sleep(0.3)
         try:
             await msg.edit_text(HELP_INDEX)
         except Exception:
             await message.reply_text(HELP_INDEX)
     except Exception as e:
         print(f"[helpanim] {e}")
-        try:
-            await message.reply_text(HELP_INDEX)
-        except Exception:
-            pass
