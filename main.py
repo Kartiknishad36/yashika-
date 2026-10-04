@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import time
 from datetime import datetime, timezone
 
 from core.clients import app
@@ -9,7 +10,6 @@ from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers, SUDO_USERS
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 
-# Keep module list lean — heavy / broken modules removed for speed
 MODULES = [
     "modules.owner.sudoers",
     "modules.owner.login",
@@ -59,7 +59,6 @@ MODULES = [
     "modules.utils.tools",
     "modules.utils.profile_set",
     "modules.utils.fun_text",
-    "modules.utils.spy_pack",
     "modules.utils.copy_tools",
     "modules.utils.hashtag",
     "modules.utils.vanish",
@@ -84,6 +83,10 @@ for m in MODULES:
     except Exception as e:
         print(f"[Userbot] WARNING: could not load '{m}': {type(e).__name__}: {e}")
 
+# chat_id -> last track timestamp (avoid write on every message)
+_TRACKED_AT: dict[int, float] = {}
+_TRACK_INTERVAL = 3600  # 1 hour
+
 
 async def track_chats():
     from pyrogram import filters
@@ -94,6 +97,11 @@ async def track_chats():
             chat = message.chat
             if not chat:
                 return
+            now = time.time()
+            last = _TRACKED_AT.get(chat.id, 0)
+            if now - last < _TRACK_INTERVAL:
+                return
+            _TRACKED_AT[chat.id] = now
             title = getattr(chat, "title", None) or getattr(chat, "first_name", None) or ""
             await add_chat(chat.id, title)
         except Exception:
@@ -126,6 +134,9 @@ async def main():
         print(f"[Userbot] FATAL: {e}")
         raise
 
+    # Telegram naye/restart session pe GetMessages flood karta hai — thoda wait
+    await asyncio.sleep(3)
+
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     uname = f"@{me.username}" if me.username else "—"
     await _notify_log(
@@ -138,10 +149,12 @@ async def main():
         f"`.help` `.ping` `.login` `.play`"
     )
 
+    # PyTgCalls thoda baad — startup flood se clash kam
+    await asyncio.sleep(5)
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls ready")
-        await _notify_log("VC engine ready (userbot account)")
+        await _notify_log("VC engine ready")
     except Exception as e:
         print(f"[Userbot] PyTgCalls: {e}")
 
