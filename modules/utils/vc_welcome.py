@@ -1,8 +1,4 @@
-"""
-VC Welcome — per-group, new members only, shayari + TTS
-
-  .vcwelcome on | off | test | (status)
-"""
+"""VC Welcome — per-group, new members only, shayari + TTS"""
 import asyncio
 import os
 import random
@@ -14,22 +10,17 @@ from pyrogram.types import Message, ChatMemberUpdated
 from pyrogram.enums import ChatMemberStatus, ChatType
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd
 from database.mongo import get_chat_flag, set_chat_flag, _read, _write, _lock
 
-PREFIXES = [".", "!"]
 NEW_WINDOW = 7 * 24 * 60 * 60
 
 SHAYARI_WELCOME = [
-    "{name}, dil se swagat hai is mehfil mein, yahan dosti aur khushiyan hain.",
+    "{name}, dil se swagat hai is mehfil mein.",
     "{name}, aaye ho to dil khush ho gaya — welcome to the VC.",
-    "{name}, naye mehmaan, nayi muskaan — is VC mein aapka swagat hai.",
-    "{name}, group mein naya rang laaye ho — dil se welcome.",
+    "{name}, naye mehmaan, nayi muskaan — VC mein aapka swagat.",
+    "{name}, group mein naya rang — dil se welcome.",
 ]
-
-
-def cmd(*names):
-    return filters.command(list(names), prefixes=PREFIXES)
 
 
 async def _is_on(chat_id: int) -> bool:
@@ -95,7 +86,6 @@ async def _i_am_admin(client, chat_id: int) -> bool:
 async def _make_tts(text: str):
     try:
         import edge_tts
-
         out = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
         out.close()
         await edge_tts.Communicate(text, voice="hi-IN-SwaraNeural").save(out.name)
@@ -103,7 +93,6 @@ async def _make_tts(text: str):
     except Exception:
         try:
             from gtts import gTTS
-
             out = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
             out.close()
             gTTS(text=text, lang="hi").save(out.name)
@@ -118,7 +107,7 @@ async def _send_welcome(client, chat_id: int, user):
     try:
         await client.send_message(
             chat_id,
-            f"**VC Welcome**\n\n{user.mention}\n\n_{shayari}_",
+            f"<b>VC Welcome</b>\n\n{user.mention}\n\n<i>{shayari}</i>",
         )
     except Exception:
         pass
@@ -136,45 +125,38 @@ async def _send_welcome(client, chat_id: int, user):
             pass
 
 
-@app.on_message(cmd("vcwelcome", "vcwel", "vwelcome"))
-@sudo_only
+@app.on_message(ub_cmd("vcwelcome", "vcwel", "vwelcome") & filters.me)
 async def vcwelcome_cmd(client, message: Message):
     if not message.chat or message.chat.type not in (ChatType.GROUP, ChatType.SUPERGROUP):
         await message.reply_text("Sirf group me use karo.")
         return
-
     chat_id = message.chat.id
-    args = message.command[1:] if len(message.command) > 1 else []
-    action = (args[0].lower() if args else "status")
+    parts = (message.text or "").split()
+    action = parts[1].lower() if len(parts) > 1 else "status"
 
     if action in ("on", "enable", "1"):
         if not await _i_am_admin(client, chat_id):
-            await message.reply_text("Pehle is group me **admin** banao.")
+            await message.reply_text("Pehle is group me <b>admin</b> banao.")
             return
         await _set_on(chat_id, True)
         await message.reply_text(
-            f"**VC Welcome ON**\nGroup: **{message.chat.title}**\n"
-            f"Sirf naye members · pehli VC join"
+            f"<b>VC Welcome ON</b>\nGroup: <b>{message.chat.title}</b>"
         )
         return
-
     if action in ("off", "disable", "0"):
         await _set_on(chat_id, False)
-        await message.reply_text(f"**VC Welcome OFF** — {message.chat.title}")
+        await message.reply_text(f"<b>VC Welcome OFF</b> — {message.chat.title}")
         return
-
     if action == "test":
         if not await _is_on(chat_id):
-            await message.reply_text("Pehle `.vcwelcome on`")
+            await message.reply_text("Pehle <code>.vcwelcome on</code>")
             return
         await _send_welcome(client, chat_id, message.from_user)
         return
-
     on = await _is_on(chat_id)
     await message.reply_text(
-        f"**VC Welcome**\n"
-        f"Status: **{'ON' if on else 'OFF'}**\n"
-        f"`.vcwelcome on` / `off` / `test`"
+        f"<b>VC Welcome</b>: <b>{'ON' if on else 'OFF'}</b>\n"
+        f"<code>.vcwelcome on|off|test</code>"
     )
 
 
