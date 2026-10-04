@@ -1,11 +1,8 @@
 """
 basics — ping / alive / id / help
-
-Userbot: apne account se typed commands = outgoing / filters.me
-filters.command kabhi miss karta hai → yahan text parse se handle.
+Userbot own messages via filters.me + text parse.
 """
 import time
-import re
 
 from pyrogram import filters
 from pyrogram.types import Message
@@ -16,9 +13,10 @@ from modules.owner.sudoers import SUDO_USERS
 
 PREFIXES = (".", "!")
 
+CORE = {"ping", "alive", "id", "help", "menu", "cmds", "commands"}
+
 
 def _parse_cmd(text: str):
-    """Return (cmd_name, args_list) or (None, [])."""
     if not text:
         return None, []
     text = text.strip()
@@ -33,11 +31,9 @@ def _parse_cmd(text: str):
 async def _is_allowed(message: Message, client) -> bool:
     if getattr(message, "outgoing", False):
         return True
-    if filters.me(client, message):  # may not work as call — skip
-        pass
     uid = message.from_user.id if message.from_user else None
     if uid is None:
-        return bool(getattr(message, "outgoing", False))
+        return False
     if OWNER_ID and uid == OWNER_ID:
         return True
     if uid in SUDO_USERS:
@@ -88,28 +84,17 @@ def _help_text() -> str:
     )
 
 
-# -------- Core handlers: filters.me (userbot own messages) --------
-
 @app.on_message(filters.me & filters.text, group=-2)
 async def core_commands(client, message: Message):
-    """Own account se typed .cmd — highest priority."""
     text = message.text or ""
     name, args = _parse_cmd(text)
-    if not name:
-        return  # not a command — let others handle (need continue?)
 
-    # Only handle known core cmds here; others pass via continue_propagation
-    core = {
-        "ping", "alive", "id", "help", "menu", "cmds", "commands",
-    }
-    if name not in core:
-        try:
-            message.continue_propagation()
-        except Exception:
-            pass
+    # Not a command / not our core cmd → MUST continue to other handlers
+    if name is None or name not in CORE:
+        await message.continue_propagation()
         return
 
-    print(f"[cmd] core: .{name} chat={getattr(message.chat, 'id', None)}")
+    print(f"[cmd] .{name} chat={getattr(message.chat, 'id', None)}")
 
     try:
         if name == "ping":
@@ -154,7 +139,6 @@ async def core_commands(client, message: Message):
             pass
 
 
-# Also allow sudo users (incoming) for help/ping
 @app.on_message(
     filters.text
     & filters.regex(r"^[.!](ping|alive|id|help|menu|cmds|commands)(\s|$)")
@@ -164,22 +148,21 @@ async def core_commands(client, message: Message):
 async def core_commands_sudo(client, message: Message):
     if not await _is_allowed(message, client):
         return
-    text = message.text or ""
-    name, args = _parse_cmd(text)
-    if not name:
+    name, _ = _parse_cmd(message.text or "")
+    if not name or name not in CORE:
         return
-    print(f"[cmd] sudo: .{name}")
+    print(f"[cmd] sudo .{name}")
     try:
         if name == "ping":
             t0 = time.time()
             msg = await message.reply_text("Pinging…")
-            await msg.edit_text(f"<b>Pong!</b> <code>{(time.time()-t0)*1000:.0f}ms</code>")
+            await msg.edit_text(
+                f"<b>Pong!</b> <code>{(time.time() - t0) * 1000:.0f}ms</code>"
+            )
         elif name == "alive":
             await message.reply_text(f"<b>{BOT_NAME or 'Yashika'}</b> online")
         elif name == "id":
-            await message.reply_text(
-                f"Chat <code>{message.chat.id}</code>"
-            )
+            await message.reply_text(f"Chat <code>{message.chat.id}</code>")
         elif name in ("help", "menu", "cmds", "commands"):
             await message.reply_text(_help_text())
     except Exception as e:
