@@ -4,32 +4,27 @@ from pyrogram.types import Message
 from core.clients import app
 from core.call_manager import play_track, get_queue, get_current
 from modules.vc.streams import get_result
-from modules.owner.sudoers import sudo_only
-
-PREFIXES = [".", "!"]
+from modules.owner.sudoers import ub_cmd
 
 
-def cmd(name):
-    return filters.command(name, prefixes=PREFIXES) & filters.group
-
-
-@app.on_message(cmd(["play", "vply", "cplay", "cvply"]))
-@sudo_only
+@app.on_message(ub_cmd("play", "vply", "cplay", "cvply") & filters.me)
 async def play_cmd(client, message: Message):
-    if len(message.command) < 2:
-        msg = await message.reply_text("Usage: `.play <song name or link>`")
+    parts = (message.text or "").split(None, 1)
+    if len(parts) < 2:
+        await message.reply_text("Usage: <code>.play song name</code>")
         return
 
-    query = message.text.split(None, 1)[1]
-    is_video = message.command[0].lower() in ("vply", "cvply")
+    query = parts[1]
+    cmd0 = parts[0].lstrip(".!").lower().split("@")[0]
+    is_video = cmd0 in ("vply", "cvply")
     chat_id = message.chat.id
 
-    status = await message.reply_text(f"🔎 Searching: <b>{query}</b>")
+    status = await message.reply_text(f"Searching: <b>{query}</b>")
 
     try:
         result = await get_result(query, video=is_video)
     except Exception as e:
-        await status.edit_text(f"❌ Failed to fetch stream: `{e}`")
+        await status.edit_text(f"Failed: <code>{e}</code>")
         return
 
     queue = get_queue(client, chat_id)
@@ -38,7 +33,7 @@ async def play_cmd(client, message: Message):
     if chat_id in current:
         queue.append(result)
         await status.edit_text(
-            f"➕ Queued <b>{result['title']}</b> (position {len(queue)})"
+            f"Queued <b>{result['title']}</b> (#{len(queue)})"
         )
         return
 
@@ -47,13 +42,8 @@ async def play_cmd(client, message: Message):
         await play_track(client, chat_id, result["stream_url"], video=is_video)
     except Exception as e:
         current.pop(chat_id, None)
-        err_text = str(e) or type(e).__name__
-        await status.edit_text(
-            f"❌ Failed to start stream: `{err_text}`\n"
-            f"(Tip: agar bot abhi start hua hai, thoda wait karke phir try karo — "
-            f"Telegram naye session ko throttle karta hai.)"
-        )
+        await status.edit_text(f"Stream failed: <code>{e}</code>")
         return
 
-    kind = "🎬 Video" if is_video else "🎵 Audio"
-    await status.edit_text(f"{kind} started: <b>{result['title']}</b>")
+    kind = "Video" if is_video else "Audio"
+    await status.edit_text(f"{kind}: <b>{result['title']}</b>")
