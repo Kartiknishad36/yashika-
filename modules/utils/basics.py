@@ -4,7 +4,6 @@ basics — ping / alive / id / premium .help / .helpanim
 import asyncio
 import time
 
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
@@ -108,9 +107,8 @@ HELP_PAGES = {
     "owner": (
         "👑 <b>OWNER / SUDO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "<code>.addsudo .delsudo .sudolist</code>\n"
-        "<code>.approve .unapprove .approved</code>\n"
-        "<code>.clone .back .clonemode</code>\n"
-        "<code>.setname .setbio .setpfp .delpfp</code>"
+        "<code>.approve .unapprove .verify</code>\n"
+        "<code>.clone .setname .setbio .setpfp</code>"
     ),
     "login": (
         "🔑 <b>LOGIN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -119,7 +117,6 @@ HELP_PAGES = {
     ),
     "pmsec": (
         "🛡 <b>PM SECURITY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.antispam on/off .pmlog on/off</code>\n"
         "<code>.secretlog on/off .verify</code>"
     ),
     "global": (
@@ -131,7 +128,8 @@ HELP_PAGES = {
         "👮 <b>CHAT MOD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
         "<code>.ban .unban .kick .mute .unmute</code>\n"
         "<code>.promote .demote .pin .unpin</code>\n"
-        "<code>.tagall .tagallstop .zombies</code>\n"
+        "<code>.tagall .tagallstop .tagme .tagadmins</code>\n"
+        "<code>.banall .kickall .muteall .unmuteall</code>\n"
         "<code>.lock .unlock .nightmode .slowmode</code>"
     ),
     "anti": (
@@ -156,8 +154,7 @@ HELP_PAGES = {
     ),
     "bro": (
         "💕 <b>BRO / SHAYARI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.bro .brodm .brogroup .unbro .brolist</code>\n"
-        "<code>.sha .love .sad .attitude</code>"
+        "<code>.bro .brodm .brogroup .unbro .brolist</code>"
     ),
     "welcome": (
         "👋 <b>WELCOME</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -166,7 +163,7 @@ HELP_PAGES = {
     ),
     "afk": (
         "💤 <b>AFK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.afk [reason] .unafk .back</code>"
+        "<code>.afk [reason] .unafk .back .afkstatus</code>"
     ),
     "protect": (
         "🔒 <b>PROTECT</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -193,14 +190,13 @@ HELP_PAGES = {
     ),
     "tools": (
         "🛠 <b>TOOLS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.calc .time .weather .tr .short</code>\n"
+        "<code>.calc .time .weather .tr</code>\n"
         "<code>.remind .autoreply .autojoin</code>\n"
         "<code>.del .purge</code>"
     ),
     "anims": (
         "🎬 <b>ANIMATIONS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.hack .moon .loveanim .type .loading</code>\n"
-        "<code>.boom .heartbeat .party</code>"
+        "<code>.hack .hacker .heart</code>"
     ),
     "flowers": (
         "🌸 <b>FLOWERS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -208,11 +204,11 @@ HELP_PAGES = {
     ),
     "gbf": (
         "💑 <b>GF-BF</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.propose .iloveu .sorry .missu</code>"
+        "Fun / propose style cmds (optional modules)"
     ),
     "spy": (
         "🕵️ <b>SPY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.whois .spy .uinfo .scan</code>"
+        "<code>.uinfo .scan .whois</code>"
     ),
     "system": (
         "⚙️ <b>SYSTEM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
@@ -221,7 +217,8 @@ HELP_PAGES = {
     ),
     "fun": (
         "🎮 <b>FUN / ECO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.joke .quote .roast .bal .daily</code>"
+        "<code>.rose .cat .heart .hack</code>\n"
+        "<code>.bal .daily</code>"
     ),
     "ai": (
         "🤖 <b>AI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
