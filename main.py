@@ -123,7 +123,7 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
-    # ON — 4s baad command message delete (reply pehle aayega)
+    # 1 second auto-delete of command messages
     register_trigger_autodelete(app, enabled=True)
 
     try:
@@ -139,7 +139,7 @@ async def main():
         print(f"[Userbot] FATAL: {e}")
         raise
 
-    await asyncio.sleep(2)
+    await asyncio.sleep(1)
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     uname = f"@{me.username}" if me.username else "—"
@@ -153,17 +153,17 @@ async def main():
         f"Try: <code>.help</code> <code>.ping</code>"
     )
 
-    await asyncio.sleep(3)
+    await asyncio.sleep(2)
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls ready")
     except Exception as e:
         print(f"[Userbot] PyTgCalls: {e}")
 
-    print("[Userbot] Ready — type .ping or .help")
+    print("[Userbot] Ready — type .help or .ping")
     await _notify_log(
         f"<b>{BOT_NAME or 'Yashika'} READY</b>\n"
-        f"<code>.help</code> <code>.ping</code> <code>.rose</code>"
+        f"<code>.help</code> <code>.ping</code>"
     )
     await asyncio.Event().wait()
 
