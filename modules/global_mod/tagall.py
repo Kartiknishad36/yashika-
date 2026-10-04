@@ -1,100 +1,142 @@
+"""
+.tagall [text] — tag members one by one
+.tagallstop — cancel
+.tagme — tag yourself
+"""
 import asyncio
-from pyrogram import filters
+
 from pyrogram.types import Message
 from pyrogram.errors import RPCError, FloodWait
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd, sudo_only
 
-PREFIXES = [".", "!"]
-DELAY_BETWEEN_TAGS = 2.5   # seconds between each user (Telegram flood se bachne ke liye)
-
-# chat_id -> asyncio.Task
+DELAY_BETWEEN_TAGS = 2.0
 TAGALL_TASKS: dict[int, asyncio.Task] = {}
-
-
-def cmd(name):
-    return filters.command(name, prefixes=PREFIXES) & filters.group
 
 
 async def _tagall_worker(client, chat_id: int, custom_text: str):
     members = []
     try:
         async for member in client.get_chat_members(chat_id):
-            if member.user.is_bot or member.user.is_deleted:
+            u = member.user
+            if not u or u.is_bot or getattr(u, "is_deleted", False):
                 continue
-            members.append(member.user)
+            members.append(u)
     except RPCError as e:
-        await client.send_message(chat_id, f"❌ Couldn't fetch member list: `{e}`")
+        try:
+            await client.send_message(chat_id, f"Couldn't fetch members: <code>{e}</code>")
+        except Exception:
+            pass
         return
 
     if not members:
-        await client.send_message(chat_id, "No taggable members found.")
+        try:
+            await client.send_message(chat_id, "No taggable members found.")
+        except Exception:
+            pass
         return
 
     total = len(members)
     try:
-        for i, user in enumerate(members, 1):
-            mention = f'<a href="tg://user?id={user.id}">{user.first_name}</a>'
+        for user in members:
+            name = user.first_name or "User"
+            mention = f'<a href="tg://user?id={user.id}">{name}</a>'
             text = f"{mention} {custom_text}" if custom_text else mention
-
             try:
                 await client.send_message(chat_id, text)
             except FloodWait as e:
-                await asyncio.sleep(e.value)
+                await asyncio.sleep(min(int(e.value), 60))
                 try:
                     await client.send_message(chat_id, text)
-                except RPCError:
+                except Exception:
                     pass
             except RPCError:
                 pass
-
             await asyncio.sleep(DELAY_BETWEEN_TAGS)
 
-        await client.send_message(chat_id, f"✅ Tagall complete — {total} members tagged.")
+        try:
+            await client.send_message(chat_id, f"Tagall complete — <b>{total}</b> members.")
+        except Exception:
+            pass
     except asyncio.CancelledError:
-        await client.send_message(chat_id, "🛑 Tagall stopped.")
+        try:
+            await client.send_message(chat_id, "Tagall stopped.")
+        except Exception:
+            pass
         raise
     finally:
         TAGALL_TASKS.pop(chat_id, None)
 
 
-@app.on_message(cmd("tagall"))
+@app.on_message(ub_cmd("tagall"))
 @sudo_only
 async def tagall_cmd(client, message: Message):
-    """
-    .tagall [message] — tags every non-bot member ONE BY ONE.
-    Each message = 1 user mention + your text.
-    Use `.tagallstop` to cancel.
-    """
-    chat_id = message.chat.id
-    if chat_id in TAGALL_TASKS:
-        await message.reply_text("A tagall is already running here. Use `.tagallstop` to stop it.")
+    if not message.chat or message.chat.type.name not in ("GROUP", "SUPERGROUP"):
+        await message.reply_text("Sirf <b>group</b> me use karo.")
         return
 
-    custom_text = message.text.split(None, 1)[1] if len(message.command) > 1 else ""
-    await message.reply_text(
-        "🏷 Tagging everyone **user-by-user**...\n"
-        "Use `.tagallstop` to cancel."
-    )
+    chat_id = message.chat.id
+    if chat_id in TAGALL_TASKS:
+        await message.reply_text("Tagall already running. <code>.tagallstop</code>")
+        return
 
+    parts = (message.text or "").split(None, 1)
+    custom_text = parts[1] if len(parts) > 1 else ""
+
+    await message.reply_text(
+        "Tagging everyone user-by-user…\n"
+        "Stop: <code>.tagallstop</code>"
+    )
     task = asyncio.create_task(_tagall_worker(client, chat_id, custom_text))
     TAGALL_TASKS[chat_id] = task
 
 
-@app.on_message(cmd("tagallstop"))
+@app.on_message(ub_cmd("tagallstop"))
 @sudo_only
 async def tagallstop_cmd(client, message: Message):
-    task = TAGALL_TASKS.get(message.chat.id)
+    task = TAGALL_TASKS.get(message.chat.id if message.chat else 0)
     if not task:
         await message.reply_text("No tagall running here.")
         return
     task.cancel()
+    await message.reply_text("Stopping tagall…")
 
 
-@app.on_message(cmd("tagme"))
+@app.on_message(ub_cmd("tagme"))
 @sudo_only
 async def tagme_cmd(client, message: Message):
-    """Mentions just the person who ran the command."""
     user = message.from_user
-    await message.reply_text(f'<a href="tg://user?id={user.id}">{user.first_name}</a>')
+    if not user:
+        return
+    await message.reply_text(
+        f'<a href="tg://user?id={user.id}">{user.first_name or "You"}</a>'
+    )
+
+
+@app.on_message(ub_cmd("tagadmins"))
+@sudo_only
+async def tagadmins_cmd(client, message: Message):
+    if not message.chat or message.chat.type.name not in ("GROUP", "SUPERGROUP"):
+        await message.reply_text("Sirf group me.")
+        return
+    admins = []
+    try:
+        async for m in client.get_chat_members(message.chat.id, filter="administrators"):
+            u = m.user
+            if u and not u.is_bot:
+                admins.append(f'<a href="tg://user?id={u.id}">{u.first_name or "Admin"}</a>')
+    except Exception as e:
+        await message.reply_text(f"Error: <code>{e}</code>")
+        return
+    if not admins:
+        await message.reply_text("No admins found.")
+        return
+    # batch of 5
+    for i in range(0, len(admins), 5):
+        chunk = " ".join(admins[i : i + 5])
+        try:
+            await message.reply_text(chunk)
+        except Exception:
+            pass
+        await asyncio.sleep(1.2)
