@@ -1,13 +1,13 @@
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
 from core.call_manager import play_track, get_queue, get_current
 from modules.vc.streams import get_result
-from modules.owner.sudoers import ub_cmd
+from modules.owner.sudoers import ub_cmd, sudo_only
 
 
-@app.on_message(ub_cmd("play", "vply", "cplay", "cvply") & filters.me)
+@app.on_message(ub_cmd("play", "vply", "cplay", "cvply", "vplay"))
+@sudo_only
 async def play_cmd(client, message: Message):
     parts = (message.text or "").split(None, 1)
     if len(parts) < 2:
@@ -16,7 +16,7 @@ async def play_cmd(client, message: Message):
 
     query = parts[1]
     cmd0 = parts[0].lstrip(".!").lower().split("@")[0]
-    is_video = cmd0 in ("vply", "cvply")
+    is_video = cmd0 in ("vply", "cvply", "vplay")
     chat_id = message.chat.id
 
     status = await message.reply_text(f"Searching: <b>{query}</b>")
@@ -32,9 +32,7 @@ async def play_cmd(client, message: Message):
 
     if chat_id in current:
         queue.append(result)
-        await status.edit_text(
-            f"Queued <b>{result['title']}</b> (#{len(queue)})"
-        )
+        await status.edit_text(f"Queued <b>{result['title']}</b> (#{len(queue)})")
         return
 
     current[chat_id] = result
