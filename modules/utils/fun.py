@@ -1,143 +1,54 @@
 """
-Fun ASCII-art / emoji animation commands. Purely cosmetic — no ties to
-moderation or VC systems. Works in both DM and groups, open to anyone.
+Fun ASCII / emoji commands — userbot safe (filters.me + ub_cmd)
 """
 import asyncio
+
 from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd
 
-PREFIXES = [".", "!"]
-FRAME_DELAY = 0.6
-
-
-def cmd(name):
-    return filters.command(name, prefixes=PREFIXES)
-
+FRAME_DELAY = 0.5
 
 CAT_ANIMATION = [
     "🐈",
-    "🐈\nWalking...",
-    "🐈\nWalking...",
+    "🐈 Walking...",
     "╱|、\n( .. )\n |、˜〵\nじしˍ,)ノ",
     "╱|、\n( > < )\n |、˜〵\nじしˍ,)ノ",
     "╱|、\n(˚ˎ 。7\n |、˜〵\nじしˍ,)ノ",
-    "╱|、\n(˚ˎ 。7  < Meow! 🎵\n |、˜〵\nじしˍ,)ノ",
+    "╱|、\n(˚ˎ 。7  Meow!\n |、˜〵\nじしˍ,)ノ",
 ]
 
-FLOWER_BLOOM = ["🌱", "🌿\n🌿\n🌿", "🌷\n🌷\n🌷", "🌹\n🌹\n🌹"]
+FLOWER_BLOOM = ["🌱", "🌿", "🌷", "🌹"]
 
-ROSE_ART = r"""
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⢔⣒⠂⣀⣀⣤⣄⣀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⣴⣿⠋⢠⣟⡼⣷⠼⣆⣼⢇⣿⣄⠱⣄
-⠀⠀⠀⠀⠀⠀⠀⠹⣿⡀⣆⠙⠢⠐⠉⠉⣴⣾⣽⢟⡰⠃
-⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⣦⠀⠤⢴⣿⠿⢋⣴⡏⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⡙⠻⣿⣶⣦⣭⣉⠁⣿⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣷⠀⠈⠉⠉⠉⠉⠇⡟⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⢀⠀⠀⣘⣦⣀⠀⠀⣀⡴⠊⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠛⢻⣿⣿⣿⣿⠻⣧⡀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠫⣿⠉⠻⣇⠘⠓⠂⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⢶⣾⣿⣿⣿⣿⣿⣶⣄⠀⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠹⣿⣿⣿⣿⣿⣿⣿⣧⠀⢸⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠈⠙⠻⢿⣿⣿⠿⠛⣄⢸⡇⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡁⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠁⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢹⣷⠂⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⣿⡀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⠇⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠋⠀⠀⠀⠀⠀⠀⠀⠀
-"""
+ROSE_ART = (
+    "🌹🌹🌹\n"
+    "  🌹  \n"
+    "  🌹  \n"
+    " FOR YOU "
+)
 
-HACKER_ART = r"""
-⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠋⠁⠀⠀⠈⠉⠙⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢻⣿⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⡟⠀⠀⠀⠀⠀⢀⣠⣤⣤⣤⣤⣄⠀⠀⠀⠹⣿⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⠁⠀⠀⠀⠀⠾⣿⣿⣿⣿⠿⠛⠉⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⡏⠀⠀⠀⣤⣶⣤⣉⣿⣿⡯⣀⣴⣿⡗⠀⠀⠀⠀⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⡇⠀⠀⠀⡈⠀⠀⠉⣿⣿⣶⡉⠀⠀⣀⡀⠀⠀⠀⢻⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⡇⠀⠀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠀⠀⢸⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⠀⠀⠀⠉⢉⣽⣿⠿⣿⡿⢻⣯⡍⢁⠄⠀⠀⠀⣸⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠐⡀⢉⠉⠀⠠⠀⢉⣉⠀⡜⠀⠀⠀⠀⣿⣿⣿⣿⣿
-⣿⣿⣿⣿⣿⣿⠿⠁⠀⠀⠀⠘⣤⣭⣟⠛⠛⣉⣁⡜⠀⠀⠀⠀⠀⠛⠿⣿⣿⣿
-⡿⠟⠛⠉⠉⠀⠀⠀⠀⠀⠀⠀⠈⢻⣿⡀⠀⣿⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠁⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-"""
-
-ERROR_ART = r"""
-▒▒▒▒▒▒▒▒▄▄▄▄▄▄▄▄▒▒▒▒▒▒
-▒▒█▒▒▒▄██████████▄▒▒▒▒
-▒█▐▒▒▒████████████▒▒▒▒
-▒▌▐▒▒██▄▀██████▀▄██▒▒▒
-▐┼▐▒▒██▄▄▄▄██▄▄▄▄██▒▒▒
-▐┼▐▒▒██████████████▒▒▒
-▐▄▐████─▀▐▐▀█─█─▌▐██▄▒
-▒▒█████──────────▐███▌
-▒▒█▀▀██▄█─▄───▐─▄███▀▒
-▒▒█▒▒███████▄██████▒▒▒
-▒▒▒▒▒██████████████▒▒▒
-▒▒▒▒▒█████████▐▌██▌▒▒▒
-▒▒▒▒▒▐▀▐▒▌▀█▀▒▐▒█▒▒▒▒▒
-▒▒▒▒▒▒▒▒▒▒▒▐▒▒▒▒▌▒▒▒▒▒
-"""
-
-BUTTERFLY_ART = r"""
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡜⠀⠀⡼⠗⡿⣾⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢄⣀⠀⠀⠀⡇⢀⡼⠓⡞⢩⣯⡀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠉⠳⢜⠰⡹⠁⢰⠃⣩⣿⡇⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⢙⣣⠃⣰⠗⠋⢀⣯⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣿⢔⣡⡴⠞⠻⠙⢳⡄
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
-⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠀⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
-⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-"""
-
-MYSON_ART = r"""
-  ⠀     (\__/)
-      (•ㅅ•)      Don't talk to
-   ＿ノヽ ノ＼＿      me or my son
-/　/ ⌒Ｙ⌒ Ｙ  ヽ     ever again.
-( 　(三ヽ人　 /　  |
-|　ﾉ⌒＼ ￣￣ヽ   ノ
-ヽ＿＿＿＞､＿_／
-      ｜( 王 ﾉ〈  (\__/)
-      /ﾐ`ー―彡\  (•ㅅ•)
-     / ╰    ╯ \ /    \>
-"""
+HACKER_ART = (
+    "[ SYSTEM ACCESS ]\n"
+    "> bypass firewall...\n"
+    "> decrypt keys...\n"
+    "> ROOT OK\n"
+    "SYSTEM HACKED"
+)
 
 HEART_FRAMES = [
-    "❤️🧡💛💚💙💜🖤🤍🤎\n❤️🧡💛💚💙💜🖤🤍🤎\n❤️🧡💛💚💙💜🖤🤍🤎",
-    "🧡💛💚💙💜🖤🤍🤎❤️\n🧡💛💚💙💜🖤🤍🤎❤️\n🧡💛💚💙💜🖤🤍🤎❤️",
-    "💛💚💙💜🖤🤍🤎❤️🧡\n💛💚💙💜🖤🤍🤎❤️🧡\n💛💚💙💜🖤🤍🤎❤️🧡",
-    "💚💙💜🖤🤍🤎❤️🧡💛\n💚💙💜🖤🤍🤎❤️🧡💛\n💚💙💜🖤🤍🤎❤️🧡💛",
-    "💙💜🖤🤍🤎❤️🧡💛💚\n💙💜🖤🤍🤎❤️🧡💛💚\n💙💜🖤🤍🤎❤️🧡💛💚",
-    "💜🖤🤍🤎❤️🧡💛💚💙\n💜🖤🤍🤎❤️🧡💛💚💙\n💜🖤🤍🤎❤️🧡💛💚💙",
-    "🖤🤍🤎❤️🧡💛💚💙💜\n🖤🤍🤎❤️🧡💛💚💙💜\n🖤🤍🤎❤️🧡💛💚💙💜",
-    "🤍🤎❤️🧡💛💚💙💜🖤\n🤍🤎❤️🧡💛💚💙💜🖤\n🤍🤎❤️🧡💛💚💙💜🖤",
-    "🤎❤️🧡💛💚💙💜🖤🤍\n🤎❤️🧡💛💚💙💜🖤🤍\n🤎❤️🧡💛💚💙💜🖤🤍",
-    "❤️❤️❤️❤️❤️❤️❤️❤️❤️\n❤️❤️❤️❤️❤️❤️❤️❤️❤️\n❤️❤️❤️❤️❤️❤️❤️❤️❤️",
-    "<b>❤️❤️❤️</b>",
+    "❤️",
+    "❤️🧡",
+    "❤️🧡💛",
+    "❤️🧡💛💚",
+    "❤️🧡💛💚💙",
+    "❤️🧡💛💚💙💜",
+    "❤️❤️❤️",
 ]
 
 
-async def _animate(status: Message, frames: list[str]):
+async def _animate(status: Message, frames: list):
     for frame in frames:
         try:
             await status.edit_text(f"<code>{frame}</code>")
@@ -146,63 +57,47 @@ async def _animate(status: Message, frames: list[str]):
         await asyncio.sleep(FRAME_DELAY)
 
 
-async def _draw_art(status: Message, art: str, header: str = "", footer: str = ""):
-    parts = [p for p in (header, f"<code>{art}</code>", footer) if p]
-    try:
-        await status.edit_text("\n".join(parts))
-    except Exception:
-        pass
-
-
-@app.on_message(cmd("cat"))
-@sudo_only
+@app.on_message(ub_cmd("cat") & filters.me)
 async def cat_cmd(client, message: Message):
+    print("[fun] .cat")
     status = await message.reply_text("🐈")
     await _animate(status, CAT_ANIMATION)
 
 
-@app.on_message(cmd("rose"))
-@sudo_only
+@app.on_message(ub_cmd("rose") & filters.me)
 async def rose_cmd(client, message: Message):
+    print("[fun] .rose")
     status = await message.reply_text("🌱")
     await _animate(status, FLOWER_BLOOM)
-    await _draw_art(status, ROSE_ART, footer="🌹 <b>FOR YOU!</b>")
+    try:
+        await status.edit_text(f"<code>{ROSE_ART}</code>\n🌹 <b>FOR YOU!</b>")
+    except Exception:
+        await message.reply_text("🌹 FOR YOU!")
 
 
-@app.on_message(cmd("hacker"))
-@sudo_only
+@app.on_message(ub_cmd("hacker", "hack") & filters.me)
 async def hacker_cmd(client, message: Message):
-    status = await message.reply_text("💻 <b>Hacking System...</b>")
+    print("[fun] .hacker")
+    status = await message.reply_text("💻 Hacking...")
     await asyncio.sleep(FRAME_DELAY)
-    await _draw_art(status, HACKER_ART, footer="💻 <b>SYSTEM HACKED!</b>")
+    try:
+        await status.edit_text(f"<code>{HACKER_ART}</code>")
+    except Exception:
+        await message.reply_text("💻 SYSTEM HACKED!")
 
 
-@app.on_message(cmd("error"))
-@sudo_only
-async def error_cmd(client, message: Message):
-    status = await message.reply_text("⚠️ <b>SYSTEM CRASHING...</b>")
-    await asyncio.sleep(FRAME_DELAY)
-    await _draw_art(status, ERROR_ART, footer="⚠️ <b>FATAL ERROR DETECTED!</b>")
-
-
-@app.on_message(cmd("butterfly"))
-@sudo_only
-async def butterfly_cmd(client, message: Message):
-    status = await message.reply_text("🦋 <b>Drawing...</b>")
-    await asyncio.sleep(FRAME_DELAY)
-    await _draw_art(status, BUTTERFLY_ART, footer="🦋 <b>Fly High!</b>")
-
-
-@app.on_message(cmd("myson"))
-@sudo_only
-async def myson_cmd(client, message: Message):
-    status = await message.reply_text("🐰 <b>Summoning...</b>")
-    await asyncio.sleep(FRAME_DELAY)
-    await _draw_art(status, MYSON_ART)
-
-
-@app.on_message(cmd("heart"))
-@sudo_only
+@app.on_message(ub_cmd("heart") & filters.me)
 async def heart_cmd(client, message: Message):
+    print("[fun] .heart")
     status = await message.reply_text("❤️")
     await _animate(status, HEART_FRAMES)
+
+
+@app.on_message(ub_cmd("butterfly") & filters.me)
+async def butterfly_cmd(client, message: Message):
+    await message.reply_text("🦋 Fly high!")
+
+
+@app.on_message(ub_cmd("error") & filters.me)
+async def error_cmd(client, message: Message):
+    await message.reply_text("⚠️ FATAL ERROR DETECTED!")
