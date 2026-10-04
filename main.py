@@ -77,15 +77,17 @@ MODULES = [
     "modules.media.social",
 ]
 
+loaded = 0
 for m in MODULES:
     try:
         importlib.import_module(m)
+        loaded += 1
     except Exception as e:
         print(f"[Userbot] WARNING: could not load '{m}': {type(e).__name__}: {e}")
+print(f"[Userbot] Modules loaded: {loaded}/{len(MODULES)}")
 
-# chat_id -> last track timestamp (avoid write on every message)
 _TRACKED_AT: dict[int, float] = {}
-_TRACK_INTERVAL = 3600  # 1 hour
+_TRACK_INTERVAL = 3600
 
 
 async def track_chats():
@@ -98,8 +100,7 @@ async def track_chats():
             if not chat:
                 return
             now = time.time()
-            last = _TRACKED_AT.get(chat.id, 0)
-            if now - last < _TRACK_INTERVAL:
+            if now - _TRACKED_AT.get(chat.id, 0) < _TRACK_INTERVAL:
                 return
             _TRACKED_AT[chat.id] = now
             title = getattr(chat, "title", None) or getattr(chat, "first_name", None) or ""
@@ -120,7 +121,8 @@ async def _notify_log(text: str):
 async def main():
     await load_sudoers()
     await track_chats()
-    register_trigger_autodelete(app)
+    # OFF — delete se command ignore lagti thi
+    register_trigger_autodelete(app, enabled=False)
 
     try:
         await app.start()
@@ -134,32 +136,29 @@ async def main():
         print(f"[Userbot] FATAL: {e}")
         raise
 
-    # Telegram naye/restart session pe GetMessages flood karta hai — thoda wait
-    await asyncio.sleep(3)
+    await asyncio.sleep(2)
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     uname = f"@{me.username}" if me.username else "—"
     await _notify_log(
-        f"**USERBOT STARTED**\n"
-        f"Name: **{me.first_name}**\n"
+        f"<b>USERBOT STARTED</b>\n"
+        f"Name: <b>{me.first_name}</b>\n"
         f"User: {uname}\n"
-        f"ID: `{me.id}`\n"
-        f"Bot: **{BOT_NAME or 'Yashika'}**\n"
-        f"Time: `{now}`\n\n"
-        f"`.help` `.ping` `.login` `.play`"
+        f"ID: <code>{me.id}</code>\n"
+        f"Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
+        f"Time: <code>{now}</code>\n\n"
+        f"Try: <code>.help</code> <code>.ping</code>"
     )
 
-    # PyTgCalls thoda baad — startup flood se clash kam
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     try:
         await ensure_started(app)
         print("[Userbot] PyTgCalls ready")
-        await _notify_log("VC engine ready")
     except Exception as e:
         print(f"[Userbot] PyTgCalls: {e}")
 
-    print("[Userbot] Ready.")
-    await _notify_log(f"**{BOT_NAME or 'Yashika'} READY**")
+    print("[Userbot] Ready — type .ping or .help")
+    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>\n<code>.help</code> <code>.ping</code>")
     await asyncio.Event().wait()
 
 
