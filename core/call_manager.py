@@ -1,151 +1,118 @@
 """
-Per-client PyTgCalls management — every account has its OWN VC engine.
-
-- Auto play next when current ends
-- Auto leave VC when queue empty
-- VC join/leave user-info messages: OFF
+PyTgCalls on main userbot account only.
 """
-import asyncio
-
 from pytgcalls import PyTgCalls
 from pytgcalls import filters as fl
-from pytgcalls.types import (
-    MediaStream,
-    AudioQuality,
-    VideoQuality,
-    StreamEnded,
-)
+from pytgcalls.types import MediaStream, AudioQuality, VideoQuality, StreamEnded
 
-from core.clients import app, assistant
+from core.clients import app
 
-_INSTANCES: dict[int, PyTgCalls] = {}
-_STARTED: dict[int, bool] = {}
-_QUEUES: dict[int, dict[int, list[dict]]] = {}
-_CURRENT: dict[int, dict[int, dict]] = {}
+_pytg: PyTgCalls | None = None
+_started = False
+_QUEUES: dict[int, list[dict]] = {}
+_CURRENT: dict[int, dict] = {}
 
 
-def _resolve_call_client(client):
-    """Main app → assistant (if set); others use themselves."""
-    if client is app and assistant is not None:
-        return assistant
-    return client
+def get_pytgcalls(client=None) -> PyTgCalls:
+    global _pytg
+    if _pytg is None:
+        _pytg = PyTgCalls(app)
+        _register_handlers(_pytg)
+    return _pytg
 
 
-def get_pytgcalls(client) -> PyTgCalls:
-    call_client = _resolve_call_client(client)
-    key = id(call_client)
-    if key not in _INSTANCES:
-        pytg = PyTgCalls(call_client)
-        _INSTANCES[key] = pytg
-        _register_handlers(pytg, client)
-    return _INSTANCES[key]
-
-
-def _register_handlers(pytg: PyTgCalls, client):
+def _register_handlers(pytg: PyTgCalls):
     @pytg.on_update(fl.stream_end())
     async def _on_stream_end(_: PyTgCalls, update: StreamEnded):
         chat_id = update.chat_id
-        queue = get_queue(client, chat_id)
-        current = get_current(client)
-
-        current.pop(chat_id, None)
+        queue = _QUEUES.setdefault(chat_id, [])
+        _CURRENT.pop(chat_id, None)
 
         if queue:
             next_track = queue.pop(0)
-            current[chat_id] = next_track
+            _CURRENT[chat_id] = next_track
             try:
                 await play_track(
-                    client,
+                    app,
                     chat_id,
                     next_track["stream_url"],
                     video=next_track.get("video", False),
                 )
                 try:
-                    await client.send_message(
-                        chat_id,
-                        f"⏭ Now playing: <b>{next_track['title']}</b>",
+                    await app.send_message(
+                        chat_id, f"⏭ Now playing: <b>{next_track['title']}</b>"
                     )
                 except Exception:
                     pass
             except Exception as e:
-                current.pop(chat_id, None)
-                await stop_stream(client, chat_id)
+                _CURRENT.pop(chat_id, None)
+                await stop_stream(app, chat_id)
                 try:
-                    await client.send_message(
-                        chat_id, f"❌ Failed to play next: `{e}`"
-                    )
+                    await app.send_message(chat_id, f"❌ Next failed: `{e}`")
                 except Exception:
                     pass
         else:
-            await stop_stream(client, chat_id)
+            await stop_stream(app, chat_id)
             try:
-                await client.send_message(
-                    chat_id, "⏹ Queue finished. Left the voice chat."
-                )
+                await app.send_message(chat_id, "⏹ Queue finished.")
             except Exception:
                 pass
 
-    # VC join/leave info intentionally disabled
 
-
-async def ensure_started(client):
-    call_client = _resolve_call_client(client)
-    key = id(call_client)
-    if not _STARTED.get(key):
-        await get_pytgcalls(client).start()
-        _STARTED[key] = True
+async def ensure_started(client=None):
+    global _started
+    if not _started:
+        await get_pytgcalls().start()
+        _started = True
 
 
 def get_queue(client, chat_id: int) -> list:
-    key = id(_resolve_call_client(client))
-    return _QUEUES.setdefault(key, {}).setdefault(chat_id, [])
+    return _QUEUES.setdefault(chat_id, [])
 
 
 def get_current(client) -> dict:
-    key = id(_resolve_call_client(client))
-    return _CURRENT.setdefault(key, {})
+    return _CURRENT
 
 
 async def play_track(client, chat_id: int, stream_url: str, video: bool = False):
-    await ensure_started(client)
-    pytgcalls = get_pytgcalls(client)
+    await ensure_started()
+    pytgcalls = get_pytgcalls()
 
     if video:
         stream = MediaStream(
             stream_url,
-            audio_parameters=AudioQuality.STUDIO,
+            audio_parameters=AudioQuality.HIGH,
             video_parameters=VideoQuality.SD_480p,
         )
     else:
         stream = MediaStream(
             stream_url,
-            audio_parameters=AudioQuality.STUDIO,
+            audio_parameters=AudioQuality.HIGH,
             video_flags=MediaStream.Flags.IGNORE,
         )
     await pytgcalls.play(chat_id, stream)
 
 
 async def stop_stream(client, chat_id: int):
-    key = id(_resolve_call_client(client))
-    _QUEUES.get(key, {}).pop(chat_id, None)
-    _CURRENT.get(key, {}).pop(chat_id, None)
+    _QUEUES.pop(chat_id, None)
+    _CURRENT.pop(chat_id, None)
     try:
-        await get_pytgcalls(client).leave_call(chat_id)
+        await get_pytgcalls().leave_call(chat_id)
     except Exception:
         pass
 
 
 async def pause_stream(client, chat_id: int):
-    await get_pytgcalls(client).pause(chat_id)
+    await get_pytgcalls().pause(chat_id)
 
 
 async def resume_stream(client, chat_id: int):
-    await get_pytgcalls(client).resume(chat_id)
+    await get_pytgcalls().resume(chat_id)
 
 
 async def mute_stream(client, chat_id: int):
-    await get_pytgcalls(client).mute(chat_id)
+    await get_pytgcalls().mute(chat_id)
 
 
 async def unmute_stream(client, chat_id: int):
-    await get_pytgcalls(client).unmute(chat_id)
+    await get_pytgcalls().unmute(chat_id)
