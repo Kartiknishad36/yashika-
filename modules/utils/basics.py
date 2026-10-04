@@ -1,6 +1,6 @@
 """
 basics — ping / alive / id / help
-Userbot own messages via filters.me + text parse.
+ONLY these core cmds — baaki modules khud handle karein.
 """
 import time
 
@@ -9,42 +9,7 @@ from pyrogram.types import Message
 
 from core.clients import app
 from config import BOT_NAME, OWNER_ID
-from modules.owner.sudoers import SUDO_USERS
-
-PREFIXES = (".", "!")
-
-CORE = {"ping", "alive", "id", "help", "menu", "cmds", "commands"}
-
-
-def _parse_cmd(text: str):
-    if not text:
-        return None, []
-    text = text.strip()
-    if not text or text[0] not in PREFIXES:
-        return None, []
-    parts = text[1:].split()
-    if not parts:
-        return None, []
-    return parts[0].lower().split("@")[0], parts[1:]
-
-
-async def _is_allowed(message: Message, client) -> bool:
-    if getattr(message, "outgoing", False):
-        return True
-    uid = message.from_user.id if message.from_user else None
-    if uid is None:
-        return False
-    if OWNER_ID and uid == OWNER_ID:
-        return True
-    if uid in SUDO_USERS:
-        return True
-    try:
-        me = await client.get_me()
-        if me and uid == me.id:
-            return True
-    except Exception:
-        pass
-    return False
+from modules.owner.sudoers import SUDO_USERS, ub_cmd
 
 
 def _help_text() -> str:
@@ -76,7 +41,7 @@ def _help_text() -> str:
         f"<b>VC Welcome</b>\n"
         f"<code>.vcwelcome on</code> / <code>off</code> / <code>test</code>\n\n"
         f"<b>Fun</b>\n"
-        f"<code>.rose</code> <code>.cat</code> <code>.heart</code>\n\n"
+        f"<code>.rose</code> <code>.cat</code> <code>.heart</code> <code>.hack</code>\n\n"
         f"<b>System</b>\n"
         f"<code>.ping</code> <code>.alive</code> <code>.id</code> <code>.help</code>\n\n"
         f"━━━━━━━━━━━━━━━━\n"
@@ -84,86 +49,53 @@ def _help_text() -> str:
     )
 
 
-@app.on_message(filters.me & filters.text, group=-2)
-async def core_commands(client, message: Message):
-    text = message.text or ""
-    name, args = _parse_cmd(text)
-
-    # Not a command / not our core cmd → MUST continue to other handlers
-    if name is None or name not in CORE:
-        await message.continue_propagation()
-        return
-
-    print(f"[cmd] .{name} chat={getattr(message.chat, 'id', None)}")
-
+@app.on_message(ub_cmd("ping") & filters.me)
+async def ping_cmd(client, message: Message):
+    t0 = time.time()
     try:
-        if name == "ping":
-            t0 = time.time()
-            msg = await message.reply_text("Pinging…")
-            ms = (time.time() - t0) * 1000
-            await msg.edit_text(f"<b>Pong!</b> <code>{ms:.0f}ms</code>")
-            return
-
-        if name == "alive":
-            await message.reply_text(
-                f"<b>{BOT_NAME or 'Yashika'}</b> is online.\n"
-                f"<code>.help</code> · <code>.ping</code>"
-            )
-            return
-
-        if name == "id":
-            chat_id = message.chat.id if message.chat else 0
-            user_id = (
-                message.reply_to_message.from_user.id
-                if message.reply_to_message and message.reply_to_message.from_user
-                else (message.from_user.id if message.from_user else "N/A")
-            )
-            await message.reply_text(
-                f"<b>Chat:</b> <code>{chat_id}</code>\n"
-                f"<b>User:</b> <code>{user_id}</code>"
-            )
-            return
-
-        if name in ("help", "menu", "cmds", "commands"):
-            await message.reply_text(_help_text())
-            print("[help] OK")
-            return
+        msg = await message.reply_text("Pinging…")
+        ms = (time.time() - t0) * 1000
+        await msg.edit_text(f"<b>Pong!</b> <code>{ms:.0f}ms</code>")
     except Exception as e:
-        print(f"[cmd] .{name} ERROR: {type(e).__name__}: {e}")
+        print(f"[ping] {e}")
+
+
+@app.on_message(ub_cmd("alive") & filters.me)
+async def alive_cmd(client, message: Message):
+    try:
+        await message.reply_text(
+            f"<b>{BOT_NAME or 'Yashika'}</b> is online.\n"
+            f"<code>.help</code> · <code>.ping</code>"
+        )
+    except Exception as e:
+        print(f"[alive] {e}")
+
+
+@app.on_message(ub_cmd("id") & filters.me)
+async def id_cmd(client, message: Message):
+    chat_id = message.chat.id if message.chat else 0
+    user_id = (
+        message.reply_to_message.from_user.id
+        if message.reply_to_message and message.reply_to_message.from_user
+        else (message.from_user.id if message.from_user else "N/A")
+    )
+    try:
+        await message.reply_text(
+            f"<b>Chat:</b> <code>{chat_id}</code>\n"
+            f"<b>User:</b> <code>{user_id}</code>"
+        )
+    except Exception as e:
+        print(f"[id] {e}")
+
+
+@app.on_message(ub_cmd("help", "menu", "cmds", "commands") & filters.me)
+async def help_cmd(client, message: Message):
+    try:
+        await message.reply_text(_help_text())
+        print("[help] OK")
+    except Exception as e:
+        print(f"[help] {e}")
         try:
-            await client.send_message(
-                message.chat.id,
-                f"Error: <code>{type(e).__name__}: {e}</code>",
-            )
-        except Exception:
-            pass
-
-
-@app.on_message(
-    filters.text
-    & filters.regex(r"^[.!](ping|alive|id|help|menu|cmds|commands)(\s|$)")
-    & ~filters.me,
-    group=-1,
-)
-async def core_commands_sudo(client, message: Message):
-    if not await _is_allowed(message, client):
-        return
-    name, _ = _parse_cmd(message.text or "")
-    if not name or name not in CORE:
-        return
-    print(f"[cmd] sudo .{name}")
-    try:
-        if name == "ping":
-            t0 = time.time()
-            msg = await message.reply_text("Pinging…")
-            await msg.edit_text(
-                f"<b>Pong!</b> <code>{(time.time() - t0) * 1000:.0f}ms</code>"
-            )
-        elif name == "alive":
-            await message.reply_text(f"<b>{BOT_NAME or 'Yashika'}</b> online")
-        elif name == "id":
-            await message.reply_text(f"Chat <code>{message.chat.id}</code>")
-        elif name in ("help", "menu", "cmds", "commands"):
-            await message.reply_text(_help_text())
-    except Exception as e:
-        print(f"[cmd-sudo] {e}")
+            await client.send_message(message.chat.id, _help_text())
+        except Exception as e2:
+            print(f"[help2] {e2}")
