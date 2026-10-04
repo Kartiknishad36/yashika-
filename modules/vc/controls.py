@@ -1,4 +1,3 @@
-from pyrogram import filters
 from pyrogram.types import Message
 from database.mongo import set_vcinfo_enabled, get_vcinfo_enabled
 
@@ -7,40 +6,46 @@ from core.call_manager import (
     pause_stream, resume_stream, stop_stream, mute_stream, unmute_stream,
     play_track, get_queue, get_current,
 )
-from modules.owner.sudoers import ub_cmd
+from modules.owner.sudoers import ub_cmd, sudo_only
 
 
-@app.on_message(ub_cmd("pause") & filters.me)
+@app.on_message(ub_cmd("pause"))
+@sudo_only
 async def pause_cmd(client, message: Message):
     await pause_stream(client, message.chat.id)
     await message.reply_text("Paused.")
 
 
-@app.on_message(ub_cmd("resume") & filters.me)
+@app.on_message(ub_cmd("resume"))
+@sudo_only
 async def resume_cmd(client, message: Message):
     await resume_stream(client, message.chat.id)
     await message.reply_text("Resumed.")
 
 
-@app.on_message(ub_cmd("vmute") & filters.me)
+@app.on_message(ub_cmd("vmute"))
+@sudo_only
 async def mute_cmd(client, message: Message):
     await mute_stream(client, message.chat.id)
     await message.reply_text("VC muted.")
 
 
-@app.on_message(ub_cmd("vunmute") & filters.me)
+@app.on_message(ub_cmd("vunmute"))
+@sudo_only
 async def unmute_cmd(client, message: Message):
     await unmute_stream(client, message.chat.id)
     await message.reply_text("VC unmuted.")
 
 
-@app.on_message(ub_cmd("stop", "end") & filters.me)
+@app.on_message(ub_cmd("stop", "end"))
+@sudo_only
 async def stop_cmd(client, message: Message):
     await stop_stream(client, message.chat.id)
     await message.reply_text("Stopped and left VC.")
 
 
-@app.on_message(ub_cmd("skip") & filters.me)
+@app.on_message(ub_cmd("skip"))
+@sudo_only
 async def skip_cmd(client, message: Message):
     chat_id = message.chat.id
     queue = get_queue(client, chat_id)
@@ -61,7 +66,25 @@ async def skip_cmd(client, message: Message):
         await message.reply_text(f"Skip failed: <code>{e}</code>")
 
 
-@app.on_message(ub_cmd("vcinfo") & filters.me)
+@app.on_message(ub_cmd("queue"))
+@sudo_only
+async def queue_cmd(client, message: Message):
+    chat_id = message.chat.id
+    queue = get_queue(client, chat_id)
+    current = get_current(client)
+    lines = ["<b>Queue</b>"]
+    if chat_id in current:
+        lines.append(f"Now: <b>{current[chat_id].get('title', '?')}</b>")
+    if not queue:
+        lines.append("Empty.")
+    else:
+        for i, t in enumerate(queue[:15], 1):
+            lines.append(f"{i}. {t.get('title', '?')}")
+    await message.reply_text("\n".join(lines))
+
+
+@app.on_message(ub_cmd("vcinfo"))
+@sudo_only
 async def vcinfo_cmd(client, message: Message):
     chat_id = message.chat.id
     parts = (message.text or "").split()
