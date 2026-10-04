@@ -1,111 +1,91 @@
-from pyrogram import filters
 from pyrogram.types import Message
 from pyrogram.errors import RPCError
 
 from core.clients import app
 from database.mongo import add_warn, get_warns, reset_warns
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd, sudo_only
 
-PREFIXES = [".", "!"]
-MAX_WARNS = 3  # auto-ban after this many warns in the same chat
-
-
-def cmd(name):
-    return filters.command(name, prefixes=PREFIXES) & filters.group
+MAX_WARNS = 3
 
 
 def _target_from(message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
-        return message.reply_to_message.from_user.id, message.reply_to_message.from_user.first_name
-    if len(message.command) > 1:
-        try:
-            return int(message.command[1]), str(message.command[1])
-        except ValueError:
-            return None, None
+        u = message.reply_to_message.from_user
+        return u.id, u.first_name or str(u.id)
+    parts = (message.text or "").split()
+    if len(parts) > 1 and parts[1].lstrip("-").isdigit():
+        return int(parts[1]), parts[1]
     return None, None
 
 
-@app.on_message(cmd("warn"))
+@app.on_message(ub_cmd("warn"))
 @sudo_only
 async def warn_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        msg = await message.reply_text("Reply to a user or give their ID: `.warn <id> [reason]`")
+        await message.reply_text("Reply or <code>.warn id [reason]</code>")
         return
-
+    parts = (message.text or "").split()
     if message.reply_to_message:
-        reason = message.text.split(None, 1)[1] if len(message.command) > 1 else "No reason given"
+        reason = " ".join(parts[1:]) if len(parts) > 1 else "No reason"
     else:
-        reason = " ".join(message.command[2:]) or "No reason given"
+        reason = " ".join(parts[2:]) if len(parts) > 2 else "No reason"
 
     count = await add_warn(message.chat.id, target, reason)
-
     if count >= MAX_WARNS:
         try:
             await client.ban_chat_member(message.chat.id, target)
             await reset_warns(message.chat.id, target)
-            msg = await message.reply_text(
-                f"🚫 <b>{name}</b> reached {MAX_WARNS} warns and has been banned."
-            )
+            await message.reply_text(f"<b>{name}</b> hit {MAX_WARNS} warns → banned.")
         except RPCError as e:
-            msg = await message.reply_text(
-                f"⚠️ {name} hit {MAX_WARNS} warns but I couldn't ban them: `{e}`\n"
-                f"(Am I admin here with ban rights?)"
-            )
+            await message.reply_text(f"Warn max but ban fail: <code>{e}</code>")
         return
-
-    msg = await message.reply_text(
-        f"⚠️ Warned <b>{name}</b> ({count}/{MAX_WARNS})\nReason: {reason}"
+    await message.reply_text(
+        f"Warned <b>{name}</b> ({count}/{MAX_WARNS})\nReason: {reason}"
     )
 
 
-@app.on_message(cmd("unwarn"))
+@app.on_message(ub_cmd("unwarn"))
 @sudo_only
 async def unwarn_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        msg = await message.reply_text("Reply to a user or give their ID: `.unwarn <id>`")
+        await message.reply_text("Reply or <code>.unwarn id</code>")
         return
-
     warns = await get_warns(message.chat.id, target)
     if not warns:
-        msg = await message.reply_text(f"{name} has no warns.")
+        await message.reply_text(f"{name} has no warns.")
         return
-
-    # remove just the most recent warn
     warns.pop()
     await reset_warns(message.chat.id, target)
     for r in warns:
         await add_warn(message.chat.id, target, r)
+    await message.reply_text(f"Removed one warn from <b>{name}</b> ({len(warns)}/{MAX_WARNS})")
 
-    msg = await message.reply_text(f"✅ Removed one warn from <b>{name}</b> ({len(warns)}/{MAX_WARNS})")
 
-
-@app.on_message(cmd("warns"))
+@app.on_message(ub_cmd("warns"))
 @sudo_only
 async def warns_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        target = message.from_user.id
-        name = message.from_user.first_name
-
+        target = message.from_user.id if message.from_user else 0
+        name = message.from_user.first_name if message.from_user else "You"
     warns = await get_warns(message.chat.id, target)
     if not warns:
-        msg = await message.reply_text(f"<b>{name}</b> has no warns in this chat.")
+        await message.reply_text(f"<b>{name}</b> has no warns.")
         return
-
-    text = f"⚠️ <b>{name}</b> — {len(warns)}/{MAX_WARNS} warns\n\n"
+    text = f"<b>{name}</b> — {len(warns)}/{MAX_WARNS} warns\n\n"
     for i, r in enumerate(warns, 1):
         text += f"{i}. {r}\n"
-    msg = await message.reply_text(text)
+    await message.reply_text(text)
 
 
-@app.on_message(cmd("resetwarns"))
+@app.on_message(ub_cmd("resetwarns"))
 @sudo_only
 async def resetwarns_cmd(client, message: Message):
     target, name = _target_from(message)
     if not target:
-        msg = await message.reply_text("Reply to a user or give their ID: `.resetwarns <id>`")
+        await message.reply_text("Reply or <code>.resetwarns id</code>")
         return
     await reset_warns(message.chat.id, target)
-    msg = await message.reply_text(f"✅ Cleared all warns for <b>{name}</b>.")
+    await message.reply_text(f"Cleared warns for <b>{name}</b>.")
