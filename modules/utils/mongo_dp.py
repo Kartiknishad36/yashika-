@@ -1,14 +1,4 @@
-"""
-🥭 MONGO DP SYSTEM
-
-  .dp / .mongodp / .getdp     → reply/user → saari profile DPs bhejo
-  .dpsave                    → reply/user → current DPs file_id save (local DB)
-  .dplog / .dphistory        → reply/user → saved DP history + count
-  .dpclear                   → reply/user → us user ki saved DP list clear
-
-Storage: database/mongo.py (storage.json) → key "mongo_dp"
-NOTE: Auto-track on every message DISABLED (photos.GetUserPhotos flood).
-"""
+"""Mongo DP — .dp .dpsave .dplog .dpclear"""
 import asyncio
 from datetime import datetime, timezone
 
@@ -16,21 +6,16 @@ from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd
 from database.mongo import _read, _write, _lock
-
-PREFIXES = [".", "!"]
-
-
-def cmd(*names):
-    return filters.command(list(names), prefixes=PREFIXES)
 
 
 async def _resolve_user(client, message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
         return message.reply_to_message.from_user
-    if len(message.command) > 1:
-        arg = message.command[1].lstrip("@")
+    parts = (message.text or "").split()
+    if len(parts) > 1:
+        arg = parts[1].lstrip("@")
         try:
             return await client.get_users(
                 int(arg) if arg.lstrip("-").isdigit() else arg
@@ -102,151 +87,72 @@ def _photo_entry(photo) -> dict:
     }
 
 
-@app.on_message(cmd("dp", "mongodp", "getdp", "mdp"))
-@sudo_only
+@app.on_message(ub_cmd("dp", "mongodp", "getdp", "mdp") & filters.me)
 async def mongo_dp_cmd(client, message: Message):
     user = await _resolve_user(client, message)
     if not user:
-        await message.reply_text(
-            "🥭 <b>Mongo DP</b>\n"
-            "Usage: <b>reply</b> ya <code>.dp @user</code> / <code>.dp id</code>"
-        )
+        await message.reply_text("Usage: reply ya <code>.dp @user</code>")
         return
-
-    status = await message.reply_text(
-        f"🥭 Mongo DP fetch… <code>{user.first_name}</code>"
-    )
-
+    status = await message.reply_text(f"Mongo DP fetch… <code>{user.first_name}</code>")
     photos = await _collect_photos(client, user.id, limit=50)
     if not photos:
-        await status.edit_text(
-            f"❌ <b>{user.first_name}</b> ki koi profile photo nahi / private."
-        )
+        await status.edit_text(f"<b>{user.first_name}</b> ki DP nahi / private.")
         return
-
     entries = [_photo_entry(p) for p in photos]
     await _dp_store_add(user.id, entries)
-
-    await status.edit_text(
-        f"🥭 <b>Mongo DP</b> · {user.mention}\n"
-        f"🖼 Photos: <code>{len(photos)}</code>\n"
-        f"Sending…"
-    )
-
+    await status.edit_text(f"Mongo DP · {user.mention}\nPhotos: <code>{len(photos)}</code>")
     sent = 0
     for i, p in enumerate(photos, 1):
         try:
             await client.send_photo(
-                message.chat.id,
-                p.file_id,
-                caption=(
-                    f"🥭 <b>Mongo DP</b> {i}/{len(photos)}\n"
-                    f"User: {user.mention}\n"
-                    f"ID: <code>{user.id}</code>"
-                ),
+                message.chat.id, p.file_id,
+                caption=f"DP {i}/{len(photos)} · {user.mention}",
                 reply_to_message_id=message.id,
             )
             sent += 1
-            await asyncio.sleep(0.35)
+            await asyncio.sleep(0.4)
         except Exception:
-            try:
-                if getattr(p, "sizes", None):
-                    await client.send_photo(
-                        message.chat.id,
-                        p.sizes[-1].file_id,
-                        caption=f"🥭 DP {i}/{len(photos)} · {user.id}",
-                        reply_to_message_id=message.id,
-                    )
-                    sent += 1
-            except Exception:
-                pass
-
-    await status.edit_text(
-        f"✅ <b>Mongo DP done</b>\n"
-        f"User: {user.mention}\n"
-        f"Sent: <code>{sent}/{len(photos)}</code>\n"
-        f"Saved in DB: <code>yes</code>"
-    )
+            pass
+    await status.edit_text(f"Done · Sent <code>{sent}/{len(photos)}</code>")
 
 
-@app.on_message(cmd("dpsave", "savedp", "mongosave"))
-@sudo_only
+@app.on_message(ub_cmd("dpsave", "savedp", "mongosave") & filters.me)
 async def dp_save_cmd(client, message: Message):
     user = await _resolve_user(client, message)
     if not user:
         await message.reply_text("Usage: reply / <code>.dpsave @user</code>")
         return
-
     photos = await _collect_photos(client, user.id, limit=50)
     if not photos:
-        await message.reply_text("❌ Koi DP nahi mili.")
+        await message.reply_text("Koi DP nahi.")
         return
-
     entries = [_photo_entry(p) for p in photos]
     await _dp_store_add(user.id, entries)
     total = len(await _dp_store_get(user.id))
-
     await message.reply_text(
-        f"✅ <b>Mongo DP saved</b>\n"
-        f"User: {user.mention}\n"
-        f"New batch: <code>{len(entries)}</code>\n"
-        f"Total stored: <code>{total}</code>"
+        f"Saved · {user.mention}\nBatch: <code>{len(entries)}</code> · Total: <code>{total}</code>"
     )
 
 
-@app.on_message(cmd("dplog", "dphistory", "mongolog"))
-@sudo_only
+@app.on_message(ub_cmd("dplog", "dphistory", "mongolog") & filters.me)
 async def dp_log_cmd(client, message: Message):
     user = await _resolve_user(client, message)
     if not user:
         await message.reply_text("Usage: reply / <code>.dplog @user</code>")
         return
-
     stored = await _dp_store_get(user.id)
     live = await _collect_photos(client, user.id, limit=100)
-
-    lines = [
-        "🥭 <b>MONGO DP LOG</b>",
-        f"User: {user.mention}",
-        f"ID: <code>{user.id}</code>",
-        "━━━━━━━━━━━━━━━━━━━━",
-        f"🖼 Live Telegram DPs: <code>{len(live)}</code>",
-        f"💾 Stored in DB: <code>{len(stored)}</code>",
-    ]
-
-    if stored:
-        lines.append("")
-        lines.append("<b>Last saved entries:</b>")
-        for i, e in enumerate(stored[-10:], 1):
-            ts = e.get("date") or 0
-            try:
-                dt = datetime.fromtimestamp(int(ts), tz=timezone.utc).strftime(
-                    "%Y-%m-%d %H:%M"
-                )
-            except Exception:
-                dt = "—"
-            wh = ""
-            if e.get("w") and e.get("h"):
-                wh = f" {e['w']}x{e['h']}"
-            lines.append(
-                f"{i}. <code>{(e.get('unique_id') or '—')[:16]}</code>{wh} · {dt}"
-            )
-
-    lines.append("")
-    lines.append(
-        "Commands: <code>.dp</code> <code>.dpsave</code> <code>.dpclear</code>"
+    await message.reply_text(
+        f"<b>Mongo DP Log</b>\n{user.mention}\n"
+        f"Live: <code>{len(live)}</code> · Stored: <code>{len(stored)}</code>"
     )
-    await message.reply_text("\n".join(lines))
 
 
-@app.on_message(cmd("dpclear", "cleardp"))
-@sudo_only
+@app.on_message(ub_cmd("dpclear", "cleardp") & filters.me)
 async def dp_clear_cmd(client, message: Message):
     user = await _resolve_user(client, message)
     if not user:
         await message.reply_text("Usage: reply / <code>.dpclear @user</code>")
         return
     await _dp_store_clear(user.id)
-    await message.reply_text(
-        f"🗑 Mongo DP store cleared for {user.mention}"
-    )
+    await message.reply_text(f"Cleared for {user.mention}")
