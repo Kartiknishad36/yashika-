@@ -3,6 +3,8 @@ Auth + userbot-safe command filter
 
 ub_cmd("play", "rose") — text parse for . / ! commands
 sudo_only / owner_or_sudo / owner_only
+
+Also patches pyrogram filters.command so legacy modules work.
 """
 import functools
 from pyrogram import filters
@@ -48,7 +50,7 @@ def ub_cmd(*names):
         if cmd not in want:
             return False
         try:
-            message.command = parts
+            message.command = list(parts)
             message.command[0] = cmd
         except Exception:
             pass
@@ -184,3 +186,19 @@ async def sudolist_cmd(client, message: Message):
         f"<b>Sudo list</b>\n\n{lines}\n\n"
         f"<b>OWNER:</b> <code>{OWNER_ID}</code>"
     )
+
+
+# Make filters.command work for pure userbot (must load BEFORE other modules)
+try:
+    _orig_command = filters.command
+
+    def _ub_command(commands, prefixes=None, case_sensitive=False):
+        if isinstance(commands, str):
+            commands = [commands]
+        names = [str(c).lower().lstrip("./!") for c in commands]
+        return ub_cmd(*names)
+
+    filters.command = _ub_command
+    print("[sudoers] filters.command → ub_cmd patch ON")
+except Exception as _e:
+    print(f"[sudoers] patch skip: {_e}")
