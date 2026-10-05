@@ -4,18 +4,16 @@ basics — ping / alive / id / premium .help / .helpanim
 import asyncio
 import time
 
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
 from config import BOT_NAME
-from modules.owner.sudoers import ub_cmd, sudo_only, ME_ID, OWNER_ID, SUDO_USERS
+from modules.owner.sudoers import ub_cmd, ME_ID, OWNER_ID, SUDO_USERS
 
 NAME = BOT_NAME or "Yashika"
 
 
 async def _safe_send(message: Message, text: str):
-    """Reply; fallback send_message if reply fails."""
     try:
         await message.reply_text(text)
         return True
@@ -26,7 +24,6 @@ async def _safe_send(message: Message, text: str):
             return True
         except Exception as e2:
             print(f"[safe_send send] {e2}")
-            # last try: strip HTML
             plain = (
                 text.replace("<b>", "").replace("</b>", "")
                 .replace("<i>", "").replace("</i>", "")
@@ -41,8 +38,9 @@ async def _safe_send(message: Message, text: str):
 
 
 @app.on_message(ub_cmd("ping"), group=-5)
-@sudo_only
 async def ping_cmd(client, message: Message):
+    if not _allowed(message):
+        return
     start = time.time()
     try:
         msg = await message.reply_text("Pinging...")
@@ -54,8 +52,9 @@ async def ping_cmd(client, message: Message):
 
 
 @app.on_message(ub_cmd("alive"), group=-5)
-@sudo_only
 async def alive_cmd(client, message: Message):
+    if not _allowed(message):
+        return
     await _safe_send(
         message,
         f"<b>{NAME}</b> is <b>ALIVE</b>\n"
@@ -65,8 +64,9 @@ async def alive_cmd(client, message: Message):
 
 
 @app.on_message(ub_cmd("id"), group=-5)
-@sudo_only
 async def id_cmd(client, message: Message):
+    if not _allowed(message):
+        return
     chat_id = message.chat.id if message.chat else 0
     user_id = (
         message.reply_to_message.from_user.id
@@ -113,137 +113,36 @@ HELP_INDEX = (
 )
 
 HELP_PAGES = {
-    "vc": (
-        "<b>MUSIC / VC</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.play .vply .vplay .skip .stop</code>\n"
-        "<code>.pause .resume .queue</code>\n"
-        "<code>.vmute .vunmute .vcinfo</code>\n"
-        "<code>.vcwelcome on/off/test</code>"
-    ),
-    "owner": (
-        "<b>OWNER / SUDO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.addsudo .delsudo .sudolist</code>\n"
-        "<code>.approve .unapprove .verify</code>\n"
-        "<code>.clone .setname .setbio .setpfp</code>"
-    ),
-    "login": (
-        "<b>LOGIN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.login .cancellogin .addsession .mylogin</code>\n"
-        "Phone → OTP → 2FA · Saved Messages only"
-    ),
-    "pmsec": (
-        "<b>PM SECURITY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.secretlog on/off .verify</code>"
-    ),
-    "global": (
-        "<b>GLOBAL</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.gban .ungban .gbanlist</code>\n"
-        "<code>.gmute .gunmute</code>"
-    ),
-    "mod": (
-        "<b>CHAT MOD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ban .unban .kick .mute .unmute</code>\n"
-        "<code>.promote .demote .pin .unpin</code>\n"
-        "<code>.tagall .tagallstop .tagme .tagadmins</code>\n"
-        "<code>.banall .kickall .muteall .unmuteall</code>"
-    ),
-    "anti": (
-        "<b>ANTI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.antilink on/off .antidelete on/off</code>\n"
-        "<code>.antiflood on 5 60</code>"
-    ),
-    "warn": (
-        "<b>WARN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.warn .unwarn .warns .resetwarns</code>"
-    ),
-    "cast": (
-        "<b>BROADCAST</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.broadcast</code> all\n"
-        "<code>.gcast</code> groups\n"
-        "<code>.dmcast</code> DMs"
-    ),
-    "raid": (
-        "<b>RAID / SPAM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.raid 10 text</code> · <code>.raid off</code>\n"
-        "<code>.spam 10 text</code> · <code>.spam off</code>"
-    ),
-    "bro": (
-        "<b>BRO</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.bro .brodm .brogroup .unbro .brolist</code>"
-    ),
-    "welcome": (
-        "<b>WELCOME</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.welcome on/off .setwelcome</code>\n"
-        "<code>.vcwelcome on/off/test</code>"
-    ),
-    "afk": (
-        "<b>AFK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.afk reason .unafk .back .afkstatus</code>"
-    ),
-    "protect": (
-        "<b>PROTECT</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.protect on/off</code>"
-    ),
-    "notes": (
-        "<b>NOTES</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.save .get .notes .clearnote</code>"
-    ),
-    "dl": (
-        "<b>DOWNLOAD</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ytmp3 .ytmp4 .song .video .dl</code>\n"
-        "<code>.insta .tiktok .fb .social</code>"
-    ),
-    "media": (
-        "<b>MEDIA</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.kang .tts .tg .qr .paste</code>\n"
-        "<code>.dp .dpsave .dplog .dpclear</code>"
-    ),
-    "ghost": (
-        "<b>GHOST / TRACK</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ghostmod .vanish .track .tracklist</code>\n"
-        "<code>.secretlog</code>"
-    ),
-    "tools": (
-        "<b>TOOLS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.calc .time .weather .tr</code>\n"
-        "<code>.remind .autoreply .autojoin</code>"
-    ),
-    "anims": (
-        "<b>ANIMS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.hack .hacker .heart</code>"
-    ),
-    "flowers": (
-        "<b>FLOWERS</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.rose .cat .heart .hacker</code>"
-    ),
-    "spy": (
-        "<b>SPY</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.uinfo .scan .whois</code>"
-    ),
-    "system": (
-        "<b>SYSTEM</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.ping .alive .id .help .helpanim</code>\n"
-        "<code>.uptime .about .restart .logs</code>"
-    ),
-    "fun": (
-        "<b>FUN</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "<code>.rose .cat .heart .hack</code>\n"
-        "<code>.bal .daily</code>"
-    ),
-    "ai": (
-        "<b>AI</b>\n━━━━━━━━━━━━━━━━━━━━\n"
-        "Optional / disabled for speed."
-    ),
+    "vc": "<b>MUSIC / VC</b>\n<code>.play .skip .stop .pause .resume .queue</code>\n<code>.vcwelcome on/off/test</code>",
+    "owner": "<b>OWNER</b>\n<code>.addsudo .delsudo .sudolist</code>",
+    "login": "<b>LOGIN</b>\n<code>.login .cancellogin .addsession .mylogin</code>",
+    "pmsec": "<b>PM SEC</b>\n<code>.secretlog on/off .verify</code>",
+    "global": "<b>GLOBAL</b>\n<code>.gban .ungban .gbanlist .gmute</code>",
+    "mod": "<b>MOD</b>\n<code>.ban .kick .mute .promote .pin</code>\n<code>.tagall .tagallstop .tagme .tagadmins</code>",
+    "anti": "<b>ANTI</b>\n<code>.antilink on/off .antidelete on/off .antiflood</code>",
+    "warn": "<b>WARN</b>\n<code>.warn .unwarn .warns .resetwarns</code>",
+    "cast": "<b>CAST</b>\n<code>.broadcast .gcast .dmcast</code>",
+    "raid": "<b>RAID</b>\n<code>.raid 10 text .spam 10 text</code>",
+    "bro": "<b>BRO</b>\n<code>.bro .brodm .brogroup .unbro .brolist</code>",
+    "welcome": "<b>WELCOME</b>\n<code>.welcome on/off .setwelcome .vcwelcome</code>",
+    "afk": "<b>AFK</b>\n<code>.afk .unafk .back .afkstatus</code>",
+    "protect": "<b>PROTECT</b>\n<code>.protect on/off</code>",
+    "notes": "<b>NOTES</b>\n<code>.save .get .notes .clearnote</code>",
+    "dl": "<b>DL</b>\n<code>.ytmp3 .ytmp4 .song .video .dl</code>",
+    "media": "<b>MEDIA</b>\n<code>.kang .tts .dp .dpsave .dplog</code>",
+    "ghost": "<b>GHOST</b>\n<code>.ghostmod .vanish .track .secretlog</code>",
+    "tools": "<b>TOOLS</b>\n<code>.calc .time .weather .tr .remind</code>",
+    "anims": "<b>ANIMS</b>\n<code>.hack .hacker .heart</code>",
+    "flowers": "<b>FLOWERS</b>\n<code>.rose .cat .heart</code>",
+    "spy": "<b>SPY</b>\n<code>.uinfo .scan .whois</code>",
+    "system": "<b>SYSTEM</b>\n<code>.ping .alive .id .help .uptime .restart</code>",
+    "fun": "<b>FUN</b>\n<code>.rose .cat .heart .hack .bal .daily</code>",
+    "ai": "<b>AI</b>\nOptional / disabled.",
 }
-
 HELP_PAGES["antilink"] = HELP_PAGES["anti"]
 HELP_PAGES["broadcast"] = HELP_PAGES["cast"]
-HELP_PAGES["utility"] = HELP_PAGES["system"]
 HELP_PAGES["sha"] = HELP_PAGES["bro"]
-HELP_PAGES["track"] = HELP_PAGES["ghost"]
 HELP_PAGES["eco"] = HELP_PAGES["fun"]
-HELP_PAGES["gbf"] = HELP_PAGES["fun"]
-HELP_PAGES["pm"] = HELP_PAGES["pmsec"]
 
 
 def _allowed(message: Message) -> bool:
@@ -251,7 +150,7 @@ def _allowed(message: Message) -> bool:
         return True
     uid = message.from_user.id if message.from_user else None
     if uid is None:
-        return bool(getattr(message, "outgoing", False))
+        return False
     if ME_ID and uid == ME_ID:
         return True
     if OWNER_ID and uid == OWNER_ID:
@@ -267,41 +166,24 @@ async def _do_help(message: Message):
         key = parts[1].lower()
         page = HELP_PAGES.get(key)
         if not page:
-            await _safe_send(
-                message,
-                f"No page: <code>{key}</code>\n<code>.help</code> for menu.",
-            )
+            await _safe_send(message, f"No page: <code>{key}</code>\n<code>.help</code>")
             return
-        ok = await _safe_send(message, page)
-        print(f"[help] page={key} ok={ok}")
+        await _safe_send(message, page)
+        print(f"[help] page={key}")
         return
-    ok = await _safe_send(message, HELP_INDEX)
-    print(f"[help] index ok={ok}")
+    await _safe_send(message, HELP_INDEX)
+    print("[help] index OK")
 
 
 @app.on_message(ub_cmd("help", "menu", "cmds", "commands"), group=-5)
 async def help_cmd(client, message: Message):
     if not _allowed(message):
-        # still try if from me after start
         try:
             me = await client.get_me()
-            if message.from_user and message.from_user.id == me.id:
-                pass
-            else:
+            if not (message.from_user and message.from_user.id == me.id):
                 return
         except Exception:
             return
-    await _do_help(message)
-
-
-# Backup: filters.me regex (agar ub_cmd miss)
-@app.on_message(
-    filters.me
-    & filters.text
-    & filters.regex(r"^[.!](help|menu|cmds|commands)(\s|$)"),
-    group=-4,
-)
-async def help_backup(client, message: Message):
     await _do_help(message)
 
 
