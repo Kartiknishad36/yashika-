@@ -1,10 +1,5 @@
 """
-Auth + userbot-safe command filter
-
-ub_cmd("play", "rose") — text parse for . / ! commands
-sudo_only / owner_or_sudo / owner_only
-
-Also patches pyrogram filters.command so legacy modules work.
+Auth + userbot command filter
 """
 import functools
 from pyrogram import filters
@@ -19,9 +14,12 @@ ME_ID: int = 0
 
 
 async def load_sudoers():
+    global ME_ID
     SUDO_USERS.clear()
     if OWNER_ID:
         SUDO_USERS.add(OWNER_ID)
+    if ME_ID:
+        SUDO_USERS.add(ME_ID)
     try:
         for uid in await get_sudoers():
             SUDO_USERS.add(uid)
@@ -33,11 +31,12 @@ def set_me_id(uid: int):
     global ME_ID
     ME_ID = int(uid)
     SUDO_USERS.add(ME_ID)
+    print(f"[sudoers] ME_ID set to {ME_ID}")
 
 
 def ub_cmd(*names):
-    """Match .cmd / !cmd — sets message.command for handlers."""
-    want = {n.lower().lstrip(".!") for n in names}
+    """Match .cmd / !cmd / /cmd — sets message.command"""
+    want = {n.lower().lstrip(".!/") for n in names}
 
     async def _filter(_, __, message: Message):
         text = (message.text or message.caption or "").strip()
@@ -59,12 +58,19 @@ def ub_cmd(*names):
     return filters.create(_filter)
 
 
-def _is_self(message: Message) -> bool:
+def is_allowed(message: Message) -> bool:
+    """Live check — never use stale ME_ID import."""
     if getattr(message, "outgoing", False):
         return True
-    uid = message.from_user.id if message.from_user else None
+    uid = None
+    try:
+        if message.from_user:
+            uid = message.from_user.id
+    except Exception:
+        pass
     if uid is None:
-        return False
+        # own message sometimes has no from_user in edge cases
+        return bool(getattr(message, "outgoing", False))
     if ME_ID and uid == ME_ID:
         return True
     if OWNER_ID and uid == OWNER_ID:
@@ -77,22 +83,16 @@ def _is_self(message: Message) -> bool:
 def sudo_only(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
-        if _is_self(message):
+        if is_allowed(message):
             return await func(client, message, *args, **kwargs)
-        if not message.from_user:
-            return
-        uid = message.from_user.id
-        if OWNER_ID and uid == OWNER_ID:
-            return await func(client, message, *args, **kwargs)
-        if uid in SUDO_USERS:
-            return await func(client, message, *args, **kwargs)
-        if ME_ID and uid == ME_ID:
-            return await func(client, message, *args, **kwargs)
+        # last chance: resolve me
         try:
-            me = await client.get_me()
-            if me and uid == me.id:
-                set_me_id(me.id)
-                return await func(client, message, *args, **kwargs)
+            uid = message.from_user.id if message.from_user else None
+            if uid:
+                me = await client.get_me()
+                if me and uid == me.id:
+                    set_me_id(me.id)
+                    return await func(client, message, *args, **kwargs)
         except Exception:
             pass
         return
@@ -101,19 +101,7 @@ def sudo_only(func):
 
 
 def owner_or_sudo(func):
-    @functools.wraps(func)
-    async def wrapper(client, message: Message, *args, **kwargs):
-        if _is_self(message):
-            return await func(client, message, *args, **kwargs)
-        if not message.from_user:
-            return
-        uid = message.from_user.id
-        if uid != OWNER_ID and uid not in SUDO_USERS and uid != ME_ID:
-            await message.reply_text("Sirf OWNER / sudo.")
-            return
-        return await func(client, message, *args, **kwargs)
-
-    return wrapper
+    return sudo_only(func)
 
 
 def owner_only(func):
@@ -121,12 +109,10 @@ def owner_only(func):
     async def wrapper(client, message: Message, *args, **kwargs):
         if getattr(message, "outgoing", False):
             return await func(client, message, *args, **kwargs)
-        if not message.from_user:
-            return
-        uid = message.from_user.id
-        if OWNER_ID and uid == OWNER_ID:
+        uid = message.from_user.id if message.from_user else None
+        if uid and OWNER_ID and uid == OWNER_ID:
             return await func(client, message, *args, **kwargs)
-        if ME_ID and uid == ME_ID:
+        if uid and ME_ID and uid == ME_ID:
             return await func(client, message, *args, **kwargs)
         return
 
@@ -138,7 +124,7 @@ def owner_only(func):
 async def addsudo_cmd(client, message: Message):
     parts = (message.text or "").split()
     if not message.reply_to_message and len(parts) < 2:
-        await message.reply_text("Reply to user or: <code>.addsudo id</code>")
+        await message.reply_text("Reply or <code>.addsudo id</code>")
         return
     try:
         target = (
@@ -146,12 +132,12 @@ async def addsudo_cmd(client, message: Message):
             if message.reply_to_message and message.reply_to_message.from_user
             else int(parts[1])
         )
-    except (ValueError, IndexError, AttributeError):
+    except Exception:
         await message.reply_text("Invalid ID.")
         return
     await add_sudo(target)
     SUDO_USERS.add(target)
-    await message.reply_text(f"Added <code>{target}</code> to sudo.")
+    await message.reply_text(f"Added <code>{target}</code>")
 
 
 @app.on_message(ub_cmd("delsudo"))
@@ -159,7 +145,7 @@ async def addsudo_cmd(client, message: Message):
 async def delsudo_cmd(client, message: Message):
     parts = (message.text or "").split()
     if not message.reply_to_message and len(parts) < 2:
-        await message.reply_text("Reply to user or: <code>.delsudo id</code>")
+        await message.reply_text("Reply or <code>.delsudo id</code>")
         return
     try:
         target = (
@@ -167,31 +153,26 @@ async def delsudo_cmd(client, message: Message):
             if message.reply_to_message and message.reply_to_message.from_user
             else int(parts[1])
         )
-    except (ValueError, IndexError, AttributeError):
+    except Exception:
         await message.reply_text("Invalid ID.")
         return
     if target == OWNER_ID:
-        await message.reply_text("OWNER ko sudo se hata nahi sakte.")
+        await message.reply_text("Cannot remove OWNER.")
         return
     await remove_sudo(target)
     SUDO_USERS.discard(target)
-    await message.reply_text(f"Removed <code>{target}</code> from sudo.")
+    await message.reply_text(f"Removed <code>{target}</code>")
 
 
 @app.on_message(ub_cmd("sudolist"))
 @owner_only
 async def sudolist_cmd(client, message: Message):
     lines = "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS))
-    await message.reply_text(
-        f"<b>Sudo list</b>\n\n{lines}\n\n"
-        f"<b>OWNER:</b> <code>{OWNER_ID}</code>"
-    )
+    await message.reply_text(f"<b>Sudo</b>\n{lines}\nOWNER: <code>{OWNER_ID}</code>")
 
 
-# Make filters.command work for pure userbot (must load BEFORE other modules)
+# Patch filters.command for legacy modules (sudoers loads first)
 try:
-    _orig_command = filters.command
-
     def _ub_command(commands, prefixes=None, case_sensitive=False):
         if isinstance(commands, str):
             commands = [commands]
@@ -199,6 +180,6 @@ try:
         return ub_cmd(*names)
 
     filters.command = _ub_command
-    print("[sudoers] filters.command → ub_cmd patch ON")
-except Exception as _e:
-    print(f"[sudoers] patch skip: {_e}")
+    print("[sudoers] filters.command → ub_cmd ON")
+except Exception as e:
+    print(f"[sudoers] patch skip: {e}")
