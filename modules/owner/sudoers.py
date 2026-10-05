@@ -34,15 +34,25 @@ def set_me_id(uid: int):
 
 
 def ub_cmd(*names):
-    """Match .cmd / !cmd — no filters.me needed."""
+    """Match .cmd / !cmd — sets message.command for handlers."""
     want = {n.lower().lstrip(".!") for n in names}
 
     async def _filter(_, __, message: Message):
         text = (message.text or message.caption or "").strip()
-        if not text or text[0] not in ".!":
+        if not text or text[0] not in ".!/":
             return False
-        cmd = text[1:].split()[0].lower().split("@")[0]
-        return cmd in want
+        parts = text[1:].split()
+        if not parts:
+            return False
+        cmd = parts[0].lower().split("@")[0]
+        if cmd not in want:
+            return False
+        try:
+            message.command = parts
+            message.command[0] = cmd
+        except Exception:
+            pass
+        return True
 
     return filters.create(_filter)
 
