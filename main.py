@@ -10,6 +10,7 @@ from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers, SUDO_USERS, set_me_id
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 
+# sudoers MUST be first (patches filters.command)
 MODULES = [
     "modules.owner.sudoers",
     "modules.owner.login",
@@ -85,10 +86,10 @@ for m in MODULES:
         importlib.import_module(m)
         loaded += 1
     except Exception as e:
-        print(f"[Userbot] WARNING: could not load '{m}': {type(e).__name__}: {e}")
+        print(f"[Userbot] WARN load {m}: {type(e).__name__}: {e}")
 print(f"[Userbot] Modules loaded: {loaded}/{len(MODULES)}")
 
-_TRACKED_AT: dict[int, float] = {}
+_TRACKED_AT: dict = {}
 _TRACK_INTERVAL = 3600
 
 
@@ -117,13 +118,12 @@ async def _notify_log(text: str):
     try:
         await app.send_message(LOG_GROUP_ID, text)
     except Exception as e:
-        print(f"[Userbot] LOG notify failed: {e}")
+        print(f"[Userbot] LOG fail: {e}")
 
 
 async def main():
     await load_sudoers()
     await track_chats()
-    # 1 second auto-delete of command messages
     register_trigger_autodelete(app, enabled=True)
 
     try:
@@ -132,15 +132,20 @@ async def main():
         set_me_id(me.id)
         if OWNER_ID:
             SUDO_USERS.add(OWNER_ID)
+        SUDO_USERS.add(me.id)
         print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
+        print(f"[Userbot] ME_ID={me.id} OWNER={OWNER_ID}")
         print(f"[Userbot] SUDO={sorted(SUDO_USERS)}")
-        print(f"[Userbot] ME_ID={me.id}")
+        try:
+            n = len(app.dispatcher.groups) if hasattr(app, "dispatcher") else "?"
+            print(f"[Userbot] dispatcher groups={n}")
+        except Exception:
+            pass
     except Exception as e:
         print(f"[Userbot] FATAL: {e}")
         raise
 
     await asyncio.sleep(1)
-
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     uname = f"@{me.username}" if me.username else "—"
     await _notify_log(
@@ -148,9 +153,8 @@ async def main():
         f"Name: <b>{me.first_name}</b>\n"
         f"User: {uname}\n"
         f"ID: <code>{me.id}</code>\n"
-        f"Bot: <b>{BOT_NAME or 'Yashika'}</b>\n"
-        f"Time: <code>{now}</code>\n\n"
-        f"Try: <code>.help</code> <code>.ping</code>"
+        f"Time: <code>{now}</code>\n"
+        f"Try: <code>.ping</code> <code>.help</code>"
     )
 
     await asyncio.sleep(2)
@@ -160,14 +164,10 @@ async def main():
     except Exception as e:
         print(f"[Userbot] PyTgCalls: {e}")
 
-    print("[Userbot] Ready — type .help or .ping")
-    await _notify_log(
-        f"<b>{BOT_NAME or 'Yashika'} READY</b>\n"
-        f"<code>.help</code> <code>.ping</code>"
-    )
+    print("[Userbot] READY — .ping .help .rose")
+    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>\n<code>.ping</code> <code>.help</code>")
     await asyncio.Event().wait()
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    asyncio.get_event_loop().run_until_complete(main())
