@@ -1,9 +1,9 @@
-"""Delete own .cmd after 3s — reply pehle aaye."""
+"""Delete own .cmd after 0.5s."""
 import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-DELETE_DELAY = 3.0
+DELETE_DELAY = 0.5
 
 
 def register_trigger_autodelete(app, enabled: bool = True):
