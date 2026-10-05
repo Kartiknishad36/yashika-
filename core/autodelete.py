@@ -1,12 +1,9 @@
-"""
-Command auto-delete — deletes YOUR .cmd message after 1 second.
-Bot reply stays.
-"""
+"""Delete own .cmd after 3s — reply pehle aaye."""
 import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-DELETE_DELAY = 1.0
+DELETE_DELAY = 3.0
 
 
 def register_trigger_autodelete(app, enabled: bool = True):
@@ -28,4 +25,4 @@ def register_trigger_autodelete(app, enabled: bool = True):
 
         asyncio.create_task(_task())
 
-    print(f"[autodelete] ON — delay {DELETE_DELAY}s")
+    print(f"[autodelete] ON — {DELETE_DELAY}s")
