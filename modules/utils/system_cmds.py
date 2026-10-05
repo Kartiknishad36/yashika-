@@ -4,11 +4,10 @@ import time
 import asyncio
 from datetime import timedelta
 
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
-from modules.owner.sudoers import ub_cmd
+from modules.owner.sudoers import ub_cmd, sudo_only
 from config import BOT_NAME, OWNER_ID
 
 START_TIME = time.time()
@@ -19,7 +18,8 @@ def _uptime() -> str:
     return str(timedelta(seconds=int(time.time() - START_TIME)))
 
 
-@app.on_message(ub_cmd("uptime", "runtime") & filters.me)
+@app.on_message(ub_cmd("uptime", "runtime"))
+@sudo_only
 async def uptime_cmd(client, message: Message):
     await message.reply_text(
         f"<b>Uptime</b>\n<code>{_uptime()}</code>\n"
@@ -27,7 +27,8 @@ async def uptime_cmd(client, message: Message):
     )
 
 
-@app.on_message(ub_cmd("about", "version") & filters.me)
+@app.on_message(ub_cmd("about", "version"))
+@sudo_only
 async def about_cmd(client, message: Message):
     me = await client.get_me()
     await message.reply_text(
@@ -40,24 +41,15 @@ async def about_cmd(client, message: Message):
     )
 
 
-@app.on_message(ub_cmd("restart") & filters.me)
+@app.on_message(ub_cmd("restart"))
+@sudo_only
 async def restart_cmd(client, message: Message):
     await message.reply_text("Restarting…")
     await asyncio.sleep(1)
-    os.execv(sys.executable, [sys.executable, *sys.argv])
+    os.execv(sys.executable, [sys.executable] + sys.argv)
 
 
-@app.on_message(ub_cmd("shutdown") & filters.me)
-async def shutdown_cmd(client, message: Message):
-    await message.reply_text("Shutdown…")
-    await asyncio.sleep(1)
-    os._exit(0)
-
-
-@app.on_message(ub_cmd("logs") & filters.me)
+@app.on_message(ub_cmd("logs"))
+@sudo_only
 async def logs_cmd(client, message: Message):
-    for path in ("bot.log", "logs/bot.log", "output.log"):
-        if os.path.exists(path):
-            await message.reply_document(path, caption="Logs")
-            return
-    await message.reply_text("Log file nahi mili (Railway dashboard dekho).")
+    await message.reply_text("Check Railway / host logs for full output.")
