@@ -1,5 +1,6 @@
 """
 Auth + userbot command filter
+ALL commands: filters.me only (sirf aapka account).
 """
 import functools
 from pyrogram import filters
@@ -35,7 +36,10 @@ def set_me_id(uid: int):
 
 
 def ub_cmd(*names):
-    """Match .cmd / !cmd / /cmd — sets message.command"""
+    """
+    Match .cmd / !cmd / /cmd — ONLY on own messages (filters.me).
+    Group me koi aur user .ban likhe to ignore.
+    """
     want = {n.lower().lstrip(".!/") for n in names}
 
     async def _filter(_, __, message: Message):
@@ -55,19 +59,14 @@ def ub_cmd(*names):
             pass
         return True
 
-    return filters.create(_filter)
+    # filters.me = sirf aapke account se bheje gaye messages
+    return filters.me & filters.create(_filter)
 
 
 def is_allowed(message: Message) -> bool:
-    """Owner / sudo / own messages. Live ME_ID check."""
+    """Own account only (userbot)."""
     if getattr(message, "outgoing", False):
         return True
-    try:
-        if getattr(message, "from_user", None) is None and getattr(message, "outgoing", None) is not False:
-            if ME_ID:
-                return True
-    except Exception:
-        pass
     uid = None
     try:
         if message.from_user:
@@ -80,25 +79,26 @@ def is_allowed(message: Message) -> bool:
         return True
     if OWNER_ID and uid == OWNER_ID:
         return True
-    if uid in SUDO_USERS:
-        return True
     return False
 
 
 def sudo_only(func):
+    """Userbot: own messages only (filters.me already on ub_cmd)."""
+
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         if is_allowed(message):
             return await func(client, message, *args, **kwargs)
-        # Resolve live identity — fixes ME_ID=0 / missing outgoing flag
         try:
             me = await client.get_me()
             if me:
                 set_me_id(me.id)
-            uid = message.from_user.id if message.from_user else None
-            if me and (uid == me.id or getattr(message, "outgoing", False)):
+            if getattr(message, "outgoing", False):
                 return await func(client, message, *args, **kwargs)
-            if uid and (uid in SUDO_USERS or (OWNER_ID and uid == OWNER_ID)):
+            uid = message.from_user.id if message.from_user else None
+            if me and uid == me.id:
+                return await func(client, message, *args, **kwargs)
+            if uid and OWNER_ID and uid == OWNER_ID:
                 return await func(client, message, *args, **kwargs)
         except Exception as e:
             print(f"[sudo_only] {e}")
@@ -186,8 +186,9 @@ async def sudolist_cmd(client, message: Message):
     await message.reply_text(f"<b>Sudo</b>\n{lines}\nOWNER: <code>{OWNER_ID}</code>")
 
 
-# Patch filters.command for legacy modules (sudoers loads first)
+# Legacy filters.command → same me-only ub_cmd
 try:
+
     def _ub_command(commands, prefixes=None, case_sensitive=False):
         if isinstance(commands, str):
             commands = [commands]
@@ -195,6 +196,6 @@ try:
         return ub_cmd(*names)
 
     filters.command = _ub_command
-    print("[sudoers] filters.command → ub_cmd ON")
+    print("[sudoers] filters.command → ub_cmd (filters.me) ON")
 except Exception as e:
     print(f"[sudoers] patch skip: {e}")
