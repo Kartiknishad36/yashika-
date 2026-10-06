@@ -1,8 +1,6 @@
 """
 Extra userbot sessions (from .login / .addsession)
-
-Each logged account runs as its own Client — own control on that ID.
-Owner can inspect: .sessions / .sessioninfo / .sessionstop
+.sessions .sessioninfo .sessionstop .sessionstart
 """
 import asyncio
 from typing import Dict, Optional
@@ -12,12 +10,11 @@ from pyrogram.types import Message
 from pyrogram.enums import ChatType, ParseMode
 
 from config import API_ID, API_HASH, OWNER_ID
+from core.notify import notify_owner
 from modules.owner.sudoers import ub_cmd, sudo_only, owner_only
 from database.mongo import _read, _write, _lock
 
-# uid -> Client
 EXTRA: Dict[int, Client] = {}
-# uid -> meta
 META: Dict[int, dict] = {}
 
 
@@ -25,11 +22,7 @@ async def _save_session(uid: int, session: str, name: str = "", username: str = 
     async with _lock:
         data = _read()
         data.setdefault("sessions", {})
-        data["sessions"][str(uid)] = {
-            "session": session,
-            "name": name,
-            "username": username,
-        }
+        data["sessions"][str(uid)] = {"session": session, "name": name, "username": username}
         _write(data)
 
 
@@ -48,8 +41,6 @@ async def _delete_session(uid: int):
 
 
 def _register_basic_handlers(client: Client, uid: int):
-    """Minimal independent control for this account."""
-
     @client.on_message(filters.me & filters.text & filters.regex(r"^[.!]ping(\s|$)"), group=-10)
     async def _ping(_, message: Message):
         await message.reply_text(f"<b>Pong!</b> session <code>{uid}</code>")
@@ -57,11 +48,7 @@ def _register_basic_handlers(client: Client, uid: int):
     @client.on_message(filters.me & filters.text & filters.regex(r"^[.!]alive(\s|$)"), group=-10)
     async def _alive(_, message: Message):
         me = await client.get_me()
-        await message.reply_text(
-            f"<b>ALIVE</b> — {me.first_name}\n"
-            f"ID: <code>{me.id}</code>\n"
-            f"Extra session bot"
-        )
+        await message.reply_text(f"<b>ALIVE</b> — {me.first_name}\nID: <code>{me.id}</code>")
 
     @client.on_message(filters.me & filters.text & filters.regex(r"^[.!]id(\s|$)"), group=-10)
     async def _id(_, message: Message):
@@ -72,13 +59,11 @@ def _register_basic_handlers(client: Client, uid: int):
     async def _help(_, message: Message):
         await message.reply_text(
             f"<b>Session bot</b> <code>{uid}</code>\n"
-            f"<code>.ping</code> <code>.alive</code> <code>.id</code>\n"
-            f"Owner: .sessions .sessioninfo"
+            f"<code>.ping</code> <code>.alive</code> <code>.id</code>"
         )
 
 
 async def start_extra_session(session: str, notify_client: Optional[Client] = None) -> tuple:
-    """Start client from session string. Returns (ok, uid_or_err)."""
     if not session or len(session) < 20:
         return False, "session short"
 
@@ -96,7 +81,6 @@ async def start_extra_session(session: str, notify_client: Optional[Client] = No
         await client.start()
         me = await client.get_me()
         uid = me.id
-        # stop old if same uid
         if uid in EXTRA:
             try:
                 await EXTRA[uid].stop()
@@ -104,21 +88,16 @@ async def start_extra_session(session: str, notify_client: Optional[Client] = No
                 pass
         _register_basic_handlers(client, uid)
         EXTRA[uid] = client
-        META[uid] = {
-            "name": me.first_name or "",
-            "username": me.username or "",
-            "session": session,
-        }
+        META[uid] = {"name": me.first_name or "", "username": me.username or "", "session": session}
         await _save_session(uid, session, META[uid]["name"], META[uid]["username"])
-        print(f"[session] started extra uid={uid} @{me.username}")
+        print(f"[session] started extra uid={uid}")
         if notify_client:
             try:
-                await notify_client.send_message(
-                    "me",
+                await notify_owner(
+                    notify_client,
                     f"<b>EXTRA SESSION ONLINE</b>\n"
                     f"{me.first_name} | @{me.username or '—'}\n"
-                    f"ID: <code>{uid}</code>\n"
-                    f"Own control: .ping .alive .help on that account",
+                    f"ID: <code>{uid}</code>",
                 )
             except Exception:
                 pass
@@ -172,7 +151,6 @@ async def count_dialogs(client: Client) -> dict:
 
 
 async def boot_saved_sessions():
-    """Called from main after app.start — restore saved sessions."""
     saved = await _load_all_sessions()
     for uid_s, meta in saved.items():
         sess = (meta or {}).get("session") or ""
@@ -182,7 +160,6 @@ async def boot_saved_sessions():
         print(f"[session] restore {uid_s}: {ok} {res}")
 
 
-# ── owner commands on MAIN app ──────────────────────────────────────────────
 from core.clients import app
 
 
@@ -200,7 +177,7 @@ async def sessions_cmd(client, message: Message):
     saved = await _load_all_sessions()
     for uid_s, meta in saved.items():
         if int(uid_s) not in META:
-            lines.append(f"💾 <code>{uid_s}</code> {meta.get('name') or ''} (saved, offline)")
+            lines.append(f"💾 <code>{uid_s}</code> {meta.get('name') or ''} (saved)")
     await message.reply_text(
         f"<b>Extra sessions</b> ({len(EXTRA)} online)\n\n"
         + ("\n".join(lines) if lines else "empty")
@@ -220,21 +197,18 @@ async def sessioninfo_cmd(client, message: Message):
     except ValueError:
         await message.reply_text("Invalid id")
         return
-
     c = EXTRA.get(uid)
     if not c:
-        # try start from saved
         saved = await _load_all_sessions()
         meta = saved.get(str(uid))
         if not meta or not meta.get("session"):
-            await message.reply_text("Session online nahi / saved nahi.")
+            await message.reply_text("Session online nahi.")
             return
         ok, res = await start_extra_session(meta["session"], notify_client=client)
         if not ok:
             await message.reply_text(f"Start fail: <code>{res}</code>")
             return
         c = EXTRA.get(uid)
-
     status = await message.reply_text("Dialogs count…")
     counts = await count_dialogs(c)
     meta = META.get(uid) or {}
@@ -267,7 +241,7 @@ async def sessionstop_cmd(client, message: Message):
         await message.reply_text("Invalid id")
         return
     ok = await stop_extra_session(uid)
-    await message.reply_text("Stopped + removed." if ok else "Not running (saved cleared if any).")
+    await message.reply_text("Stopped." if ok else "Not running.")
 
 
 @app.on_message(ub_cmd("sessionstart"))
