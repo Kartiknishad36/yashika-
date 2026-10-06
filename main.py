@@ -72,6 +72,7 @@ MODULES = [
     "modules.utils.telegraph",
     "modules.utils.autojoin",
     "modules.utils.autoreply",
+    "modules.utils.dark_spy",
     "modules.utils.spy_pack",
     "modules.utils.voice",
 
@@ -146,7 +147,6 @@ async def main():
     except Exception as e:
         print(f"[Userbot] extra sessions: {e}")
 
-    # learn chat style (non-blocking)
     try:
         from modules.utils.autoreply import boot_style_scan
 
