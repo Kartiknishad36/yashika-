@@ -59,9 +59,15 @@ def ub_cmd(*names):
 
 
 def is_allowed(message: Message) -> bool:
-    """Live check — never use stale ME_ID import."""
+    """Owner / sudo / own messages. Live ME_ID check."""
     if getattr(message, "outgoing", False):
         return True
+    try:
+        if getattr(message, "from_user", None) is None and getattr(message, "outgoing", None) is not False:
+            if ME_ID:
+                return True
+    except Exception:
+        pass
     uid = None
     try:
         if message.from_user:
@@ -69,7 +75,6 @@ def is_allowed(message: Message) -> bool:
     except Exception:
         pass
     if uid is None:
-        # own message sometimes has no from_user in edge cases
         return bool(getattr(message, "outgoing", False))
     if ME_ID and uid == ME_ID:
         return True
@@ -85,16 +90,18 @@ def sudo_only(func):
     async def wrapper(client, message: Message, *args, **kwargs):
         if is_allowed(message):
             return await func(client, message, *args, **kwargs)
-        # last chance: resolve me
+        # Resolve live identity — fixes ME_ID=0 / missing outgoing flag
         try:
+            me = await client.get_me()
+            if me:
+                set_me_id(me.id)
             uid = message.from_user.id if message.from_user else None
-            if uid:
-                me = await client.get_me()
-                if me and uid == me.id:
-                    set_me_id(me.id)
-                    return await func(client, message, *args, **kwargs)
-        except Exception:
-            pass
+            if me and (uid == me.id or getattr(message, "outgoing", False)):
+                return await func(client, message, *args, **kwargs)
+            if uid and (uid in SUDO_USERS or (OWNER_ID and uid == OWNER_ID)):
+                return await func(client, message, *args, **kwargs)
+        except Exception as e:
+            print(f"[sudo_only] {e}")
         return
 
     return wrapper
@@ -114,6 +121,14 @@ def owner_only(func):
             return await func(client, message, *args, **kwargs)
         if uid and ME_ID and uid == ME_ID:
             return await func(client, message, *args, **kwargs)
+        try:
+            me = await client.get_me()
+            if me:
+                set_me_id(me.id)
+                if uid == me.id:
+                    return await func(client, message, *args, **kwargs)
+        except Exception:
+            pass
         return
 
     return wrapper
