@@ -10,10 +10,10 @@ from database.mongo import add_chat
 from modules.owner.sudoers import load_sudoers, SUDO_USERS, set_me_id
 from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
 
-# sudoers MUST be first (patches filters.command)
 MODULES = [
     "modules.owner.sudoers",
     "modules.owner.login",
+    "modules.owner.session_manager",
     "modules.owner.pmguard",
     "modules.owner.clone",
     "modules.owner.tracker",
@@ -135,15 +135,17 @@ async def main():
         SUDO_USERS.add(me.id)
         print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
         print(f"[Userbot] ME_ID={me.id} OWNER={OWNER_ID}")
-        print(f"[Userbot] SUDO={sorted(SUDO_USERS)}")
-        try:
-            n = len(app.dispatcher.groups) if hasattr(app, "dispatcher") else "?"
-            print(f"[Userbot] dispatcher groups={n}")
-        except Exception:
-            pass
     except Exception as e:
         print(f"[Userbot] FATAL: {e}")
         raise
+
+    # restore extra sessions from .login / .addsession
+    try:
+        from modules.owner.session_manager import boot_saved_sessions
+
+        await boot_saved_sessions()
+    except Exception as e:
+        print(f"[Userbot] extra sessions: {e}")
 
     await asyncio.sleep(1)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -154,7 +156,7 @@ async def main():
         f"User: {uname}\n"
         f"ID: <code>{me.id}</code>\n"
         f"Time: <code>{now}</code>\n"
-        f"Try: <code>.ping</code> <code>.help</code>"
+        f"Try: <code>.ping</code> <code>.sessions</code>"
     )
 
     await asyncio.sleep(2)
@@ -164,8 +166,8 @@ async def main():
     except Exception as e:
         print(f"[Userbot] PyTgCalls: {e}")
 
-    print("[Userbot] READY — .ping .help .rose")
-    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>\n<code>.ping</code> <code>.help</code>")
+    print("[Userbot] READY")
+    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>")
     await asyncio.Event().wait()
 
 
