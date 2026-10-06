@@ -18,9 +18,9 @@ def _uptime() -> str:
     return str(timedelta(seconds=int(time.time() - START_TIME)))
 
 
-@app.on_message(ub_cmd("uptime", "runtime"))
+@app.on_message(ub_cmd("runtime"))
 @sudo_only
-async def uptime_cmd(client, message: Message):
+async def runtime_cmd(client, message: Message):
     await message.reply_text(
         f"<b>Uptime</b>\n<code>{_uptime()}</code>\n"
         f"Bot: <b>{BOT_NAME or 'Yashika'}</b>"
