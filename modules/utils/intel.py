@@ -7,7 +7,7 @@ Intel tools (premium detail)
   .usertoid / .user2id    @username
 """
 from pyrogram.types import Message
-from pyrogram.enums import ChatType
+from pyrogram.enums import ChatMembersFilter, ChatType
 
 from core.clients import app
 from modules.owner.sudoers import ub_cmd, sudo_only
@@ -137,7 +137,9 @@ async def chatinfo_cmd(client, message: Message):
     creator = "—"
     try:
         if chat.type in (ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL):
-            async for m in client.get_chat_members(chat.id, filter="administrators"):
+            async for m in client.get_chat_members(
+                chat.id, filter=ChatMembersFilter.ADMINISTRATORS
+            ):
                 if m.status.name == "OWNER" or str(m.status).endswith("OWNER"):
                     u = m.user
                     if u:
@@ -194,7 +196,7 @@ async def common_cmd(client, message: Message):
         async for c in client.get_common_chats(uid):
             n += 1
             title = c.title or c.first_name or str(c.id)
-            lines.append(f"• <b>{title}</b>\n  <code>{c.id}</code> · {_link(c)}")
+            lines.append(f"• <b>{title}</b>\n  <code>{c.id}</code> · {_link(c)")
             if len(lines) >= 30:
                 break
     except Exception as e:
