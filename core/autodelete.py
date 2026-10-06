@@ -1,9 +1,9 @@
-"""Delete own .cmd after 0.5s."""
+"""Delete own .cmd after delay (outgoing only)."""
 import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-DELETE_DELAY = 0.5
+DELETE_DELAY = 1.5
 
 
 def register_trigger_autodelete(app, enabled: bool = True):
@@ -11,10 +11,13 @@ def register_trigger_autodelete(app, enabled: bool = True):
         print("[autodelete] OFF")
         return
 
-    @app.on_message(
-        filters.me & filters.text & filters.regex(r"^[.!]\w"),
-        group=40,
-    )
+    async def _out(_, __, message: Message):
+        if not getattr(message, "outgoing", False):
+            return False
+        text = (message.text or "").strip()
+        return bool(text) and text[0] in ".!" and len(text) > 1
+
+    @app.on_message(filters.create(_out), group=40)
     async def _delete_trigger(client, message: Message):
         async def _task():
             await asyncio.sleep(DELETE_DELAY)
