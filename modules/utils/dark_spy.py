@@ -1,10 +1,9 @@
 """
 .user — full info + groups/channels/DMs + activity (API limits)
 
-Other user: mutual chats + unme unki activity (text/sticker/voice/photo/video)
+Other user: mutual chats + activity (text/sticker/voice/photo/video)
 Self: full dialogs breakdown
-
-Report → chat reply + Saved Messages (links ke saath)
+Report → reply + Saved Messages (links)
 """
 import asyncio
 
@@ -36,12 +35,10 @@ def _status_text(status) -> str:
 
 
 def _chat_link(chat) -> str:
-    """Public username link or private t.me/c/ link."""
     uname = getattr(chat, "username", None)
     if uname:
         return f"https://t.me/{uname}"
     cid = getattr(chat, "id", 0) or 0
-    # supergroup/channel private: -100xxxxxxxxxx → t.me/c/xxxxxxxxxx
     s = str(cid)
     if s.startswith("-100"):
         return f"https://t.me/c/{s[4:]}/1"
@@ -64,7 +61,6 @@ async def _resolve_user(client, message: Message):
 
 
 async def _scan_user_activity(client, chat_id: int, user_id: int, limit: int = 120) -> dict:
-    """Count target msgs in one chat (recent history)."""
     stats = {"text": 0, "sticker": 0, "voice": 0, "photo": 0, "video": 0, "other": 0, "total": 0}
     try:
         async for msg in client.get_chat_history(chat_id, limit=limit):
@@ -89,7 +85,6 @@ async def _scan_user_activity(client, chat_id: int, user_id: int, limit: int = 1
 
 
 async def _self_dialogs_report(client) -> str:
-    """Own account: full dialog counts + sample links."""
     groups, channels, dms, bots = [], [], [], []
     async for d in client.get_dialogs():
         c = d.chat
@@ -107,14 +102,17 @@ async def _self_dialogs_report(client) -> str:
             phone = getattr(c, "phone_number", None) or getattr(c, "phone", None) or "—"
             un = f"@{c.username}" if c.username else "—"
             is_bot = bool(getattr(c, "is_bot", False))
-            dm_line = f"• {title} | {un} | id=<code>{c.id}</code> | phone=<code>{phone}</code>\n  {link}"
+            dm_line = (
+                f"• {title} | {un} | id=<code>{c.id}</code> | phone=<code>{phone}</code>\n"
+                f"  {link}"
+            )
             if is_bot:
                 bots.append(dm_line)
             else:
                 dms.append(dm_line)
 
     parts = [
-        f"<b>═══ MY DIALOGS ═══</b>",
+        "<b>═══ MY DIALOGS ═══</b>",
         f"Groups: <code>{len(groups)}</code>",
         f"Channels: <code>{len(channels)}</code>",
         f"DMs: <code>{len(dms)}</code>",
@@ -130,19 +128,15 @@ async def _self_dialogs_report(client) -> str:
         "\n".join(dms[:50]) or "—",
     ]
     if len(groups) > 40 or len(channels) > 40 or len(dms) > 50:
-        parts.append("\n<i>(list truncated — pehle 40/50)</i>")
-    parts.append(
-        "\n<i>Note: phone tab dikhta hai jab contact/privacy allow kare.</i>"
-    )
+        parts.append("\n<i>(list truncated)</i>")
+    parts.append("\n<i>Phone tab dikhe jab contact/privacy allow kare.</i>")
     return "\n".join(parts)
 
 
 async def _other_user_chats_report(client, u) -> str:
-    """Other user: only mutual chats + activity (Telegram limit)."""
     groups, channels = [], []
     g_n = c_n = 0
     activity_lines = []
-
     common = []
     try:
         async for ch in client.get_common_chats(u.id):
@@ -154,15 +148,13 @@ async def _other_user_chats_report(client, u) -> str:
         link = _chat_link(ch)
         title = ch.title or ch.first_name or str(ch.id)
         line = f"• <b>{title}</b>\n  id=<code>{ch.id}</code>\n  {link}"
-        t = ch.type
-        if t == ChatType.CHANNEL:
+        if ch.type == ChatType.CHANNEL:
             channels.append(line)
             c_n += 1
         else:
             groups.append(line)
             g_n += 1
 
-        # activity in this chat (recent)
         st = await _scan_user_activity(client, ch.id, u.id, limit=100)
         if st["total"]:
             activity_lines.append(
@@ -177,31 +169,26 @@ async def _other_user_chats_report(client, u) -> str:
         await asyncio.sleep(0.05)
 
     phone = getattr(u, "phone_number", None) or "— (privacy)"
-
     parts = [
-        f"<b>═══ MUTUAL / VISIBLE CHATS ═══</b>",
-        f"<i>Dusre user ke saare groups/DMs Telegram API nahi deta — sirf common.</i>",
-        f"",",","",
+        "<b>═══ MUTUAL / VISIBLE CHATS ═══</b>",
+        "<i>Dusre user ke saare groups/DMs API nahi deta — sirf common.</i>",
         f"Phone: <code>{phone}</code>",
         f"Common groups: <code>{g_n}</code>",
         f"Common channels: <code>{c_n}</code>",
         "",
-        f"<b>── Groups ──</b>",
+        "<b>── Groups ──</b>",
         "\n".join(groups[:30]) or "—",
         "",
-        f"<b>── Channels ──</b>",
+        "<b>── Channels ──</b>",
         "\n".join(channels[:30]) or "—",
         "",
-        f"<b>── Activity (recent ~100 msgs / chat) ──</b>",
+        "<b>── Activity (recent ~100 msgs / chat) ──</b>",
         "\n".join(activity_lines[:25]) or "No recent msgs found in common chats",
     ]
-    # fix accidental junk in parts
-    parts = [p for p in parts if p != "",""]
     return "\n".join(parts)
 
 
 async def _send_saved_chunks(client, text: str):
-    """Telegram message limit ~4096 — split."""
     chunk = 3500
     for i in range(0, len(text), chunk):
         try:
@@ -285,14 +272,12 @@ async def user_full_cmd(client, message: Message):
 
     full = header + "\n" + chats_report
 
-    # short reply in current chat
     try:
-        short = header + f"\n<i>Full list + links → Saved Messages</i>"
+        short = header + "\n<i>Full list + links → Saved Messages</i>"
         await status.edit_text(short[:4000], disable_web_page_preview=True)
     except Exception:
         pass
 
-    # full report to Saved Messages
     await _send_saved_chunks(client, full)
     try:
         await client.send_message(
