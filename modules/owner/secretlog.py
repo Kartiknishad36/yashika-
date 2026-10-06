@@ -1,8 +1,7 @@
 """
-Secret Logger — default OFF (FloodWait avoid).
+Secret Logger — default OFF
   .secretlog on|off|status
 """
-import time
 from pyrogram import filters
 from pyrogram.types import Message
 
@@ -23,19 +22,13 @@ _CACHE_MAX = 400
 
 
 async def _log_send(client, text: str):
-    targets = []
-    if LOG_CHAT:
-        targets.append(LOG_CHAT)
+    if not LOG_CHAT:
+        print("[secretlog] LOG_GROUP_ID not set")
+        return
     try:
-        me = await client.get_me()
-        targets.append("me")
-    except Exception:
-        pass
-    for tid in targets:
-        try:
-            await client.send_message(tid, text)
-        except Exception:
-            pass
+        await client.send_message(LOG_CHAT, text)
+    except Exception as e:
+        print(f"[secretlog] {e}")
 
 
 def _kind(m: Message) -> str:
@@ -58,19 +51,19 @@ async def secretlog_toggle(client, message: Message):
     if len(message.command) < 2:
         on = await get_feature("secretlog", False)
         await message.reply_text(
-            f"SecretLog: **{'ON' if on else 'OFF'}** (default OFF)\n"
-            f"`.secretlog on` | `.secretlog off`"
+            f"SecretLog: <b>{'ON' if on else 'OFF'}</b>\n"
+            f"<code>.secretlog on</code> | <code>.secretlog off</code>"
         )
         return
     arg = message.command[1].lower()
     if arg in ("on", "1", "enable"):
         await set_feature("secretlog", True)
-        await message.reply_text("**SecretLog ON**")
+        await message.reply_text("<b>SecretLog ON</b>")
     elif arg in ("off", "0", "disable"):
         await set_feature("secretlog", False)
-        await message.reply_text("**SecretLog OFF**")
+        await message.reply_text("<b>SecretLog OFF</b>")
     else:
-        await message.reply_text("Usage: `.secretlog on|off`")
+        await message.reply_text("Usage: <code>.secretlog on|off</code>")
 
 
 @app.on_message(
@@ -109,9 +102,9 @@ async def secret_logger_deleted(client, messages):
         uname = f"@{info['username']}" if info["username"] else "—"
         await _log_send(
             client,
-            f"**SECRET DELETE**\n"
-            f"From: **{info['name']}** ({uname})\n"
-            f"ID: `{info['user_id']}`\n"
-            f"Type: `{info['kind']}`\n"
-            f"`{info['body'] or '—'}`",
+            f"<b>SECRET DELETE</b>\n"
+            f"From: <b>{info['name']}</b> ({uname})\n"
+            f"ID: <code>{info['user_id']}</code>\n"
+            f"Type: <code>{info['kind']}</code>\n"
+            f"<code>{info['body'] or '—'}</code>",
         )
