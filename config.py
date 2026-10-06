@@ -1,58 +1,55 @@
 import os
 from dotenv import load_dotenv
 
-if os.path.exists(".env"):
-    load_dotenv(".env")
+load_dotenv()
 
 
-def _int(name: str, default: int = 0) -> int:
-    val = os.environ.get(name, "")
-    if val is None or str(val).strip() == "":
-        return default
+def _str(key: str, default: str = "") -> str:
+    return (os.getenv(key) or default).strip()
+
+
+def _int(key: str, default: int = 0) -> int:
     try:
-        return int(str(val).strip())
+        return int(os.getenv(key) or default)
     except (TypeError, ValueError):
         return default
 
 
-def _str(name: str, default: str = "") -> str:
-    val = os.environ.get(name, default)
-    if val is None:
+def _bool(key: str, default: bool = False) -> bool:
+    v = (os.getenv(key) or "").strip().lower()
+    if not v:
         return default
-    return str(val).strip()
+    return v in ("1", "true", "yes", "on")
 
 
-# Telegram userbot
 API_ID = _int("API_ID", 0)
 API_HASH = _str("API_HASH", "")
 STRING_SESSION = _str("STRING_SESSION", "")
-
-# Legacy (ignored — no separate assistant)
-ASSISTANT_SESSION = ""
-ASSISTANT_ID = 0
 BOT_TOKEN = _str("BOT_TOKEN", "")
-
 OWNER_ID = _int("OWNER_ID", 0)
+
+MONGO_URI = _str("MONGO_URI", "") or _str("MONGODB_URI", "")
+MONGO_DB = _str("MONGO_DB", "yashika")
+
 _log = _str("LOG_GROUP_ID", "")
-LOG_GROUP_ID = int(_log) if _log.lstrip("-").isdigit() else None
+LOG_GROUP_ID = int(_log) if _log.lstrip("-").isdigit() else 0
 
-# Music API (Yashika) + yt-dlp fallback
-COOKIES_PATH = _str("COOKIES_PATH", "cookies.txt")
-BASE_URL = _str("BASE_URL", "")
-API_KEY = _str("API_KEY", "")
-
-# Optional number lookup (apilayer / numverify style)
-NUMLOOKUP_API_KEY = _str("NUMLOOKUP_API_KEY", "")
-
-# Branding
 BOT_NAME = _str("BOT_NAME", "Yashika")
 BOT_USERNAME = _str("BOT_USERNAME", "").lstrip("@")
-OWNER_USERNAME = _str("OWNER_USERNAME", "KARTIK_NISHAD_3").lstrip("@")
-SUPPORT_CHAT = _str("SUPPORT_CHAT", "https://t.me/+Ml99kT7JCMo0OTdl")
-UPDATE_CHANNEL = _str("UPDATE_CHANNEL", "https://t.me/ye_duniya_ek_sapna_he")
+OWNER_USERNAME = _str("OWNER_USERNAME", "").lstrip("@")
+SUPPORT_CHAT = _str("SUPPORT_CHAT", "")
+UPDATE_CHANNEL = _str("UPDATE_CHANNEL", "")
+PREFIXES = _str("PREFIXES", ".!")
 
+AUTO_DELETE = _bool("AUTO_DELETE", True)
+try:
+    DELETE_DELAY = float(os.getenv("DELETE_DELAY") or "1.5")
+except ValueError:
+    DELETE_DELAY = 1.5
+
+BASE_URL = _str("BASE_URL", "")
+API_KEY = _str("API_KEY", "")
+COOKIES_PATH = _str("COOKIES_PATH", "cookies.txt")
+NUMLOOKUP_API_KEY = _str("NUMLOOKUP_API_KEY", "")
 START_PIC = _str("START_PIC", "")
 PING_PIC = _str("PING_PIC", "")
-
-_pref = _str("PREFIXES", ".!")
-PREFIXES = list(_pref) if _pref else [".", "!"]
