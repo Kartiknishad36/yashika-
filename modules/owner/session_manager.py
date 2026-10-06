@@ -1,17 +1,13 @@
-"""
-Extra userbot sessions (from .login / .addsession)
-.sessions .sessioninfo .sessionstop .sessionstart
-"""
-import asyncio
+"""Extra userbot sessions from bot /login or .addsession"""
 from typing import Dict, Optional
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ChatType, ParseMode
 
-from config import API_ID, API_HASH, OWNER_ID
+from config import API_ID, API_HASH
 from core.notify import notify_owner
-from modules.owner.sudoers import ub_cmd, sudo_only, owner_only
+from modules.owner.sudoers import ub_cmd, owner_only
 from database.mongo import _read, _write, _lock
 
 EXTRA: Dict[int, Client] = {}
@@ -58,15 +54,13 @@ def _register_basic_handlers(client: Client, uid: int):
     @client.on_message(filters.me & filters.text & filters.regex(r"^[.!]help(\s|$)"), group=-10)
     async def _help(_, message: Message):
         await message.reply_text(
-            f"<b>Session bot</b> <code>{uid}</code>\n"
-            f"<code>.ping</code> <code>.alive</code> <code>.id</code>"
+            f"<b>Session</b> <code>{uid}</code>\n<code>.ping</code> <code>.alive</code> <code>.id</code>"
         )
 
 
 async def start_extra_session(session: str, notify_client: Optional[Client] = None) -> tuple:
     if not session or len(session) < 20:
         return False, "session short"
-
     client = Client(
         name=f"extra_{abs(hash(session)) % 10**8}",
         api_id=API_ID,
@@ -141,11 +135,8 @@ async def count_dialogs(client: Client) -> dict:
     except Exception as e:
         return {"error": str(e)}
     return {
-        "groups": groups,
-        "channels": channels,
-        "dms": dms,
-        "bots": bots,
-        "other": other,
+        "groups": groups, "channels": channels, "dms": dms,
+        "bots": bots, "other": other,
         "total": groups + channels + dms + bots + other,
     }
 
@@ -162,104 +153,56 @@ async def boot_saved_sessions():
 
 from core.clients import app
 
+if app is not None:
 
-@app.on_message(ub_cmd("sessions", "sessionlist"))
-@owner_only
-async def sessions_cmd(client, message: Message):
-    if not EXTRA and not await _load_all_sessions():
-        await message.reply_text("Koi extra session nahi.")
-        return
-    lines = []
-    for uid, meta in META.items():
-        online = "🟢" if uid in EXTRA else "🔴"
-        un = f"@{meta.get('username')}" if meta.get("username") else "—"
-        lines.append(f"{online} <code>{uid}</code> {meta.get('name') or ''} {un}")
-    saved = await _load_all_sessions()
-    for uid_s, meta in saved.items():
-        if int(uid_s) not in META:
-            lines.append(f"💾 <code>{uid_s}</code> {meta.get('name') or ''} (saved)")
-    await message.reply_text(
-        f"<b>Extra sessions</b> ({len(EXTRA)} online)\n\n"
-        + ("\n".join(lines) if lines else "empty")
-        + "\n\n<code>.sessioninfo id</code> <code>.sessionstop id</code>"
-    )
+    @app.on_message(ub_cmd("sessions", "sessionlist"))
+    @owner_only
+    async def sessions_cmd(client, message: Message):
+        lines = []
+        for uid, meta in META.items():
+            online = "🟢" if uid in EXTRA else "🔴"
+            un = f"@{meta.get('username')}" if meta.get("username") else "—"
+            lines.append(f"{online} <code>{uid}</code> {meta.get('name') or ''} {un}")
+        await message.reply_text(
+            f"<b>Extra sessions</b> ({len(EXTRA)} online)\n\n"
+            + ("\n".join(lines) if lines else "empty")
+        )
 
-
-@app.on_message(ub_cmd("sessioninfo", "sinfo"))
-@owner_only
-async def sessioninfo_cmd(client, message: Message):
-    parts = (message.text or "").split()
-    if len(parts) < 2:
-        await message.reply_text("Usage: <code>.sessioninfo user_id</code>")
-        return
-    try:
-        uid = int(parts[1])
-    except ValueError:
-        await message.reply_text("Invalid id")
-        return
-    c = EXTRA.get(uid)
-    if not c:
-        saved = await _load_all_sessions()
-        meta = saved.get(str(uid))
-        if not meta or not meta.get("session"):
-            await message.reply_text("Session online nahi.")
+    @app.on_message(ub_cmd("sessioninfo", "sinfo"))
+    @owner_only
+    async def sessioninfo_cmd(client, message: Message):
+        parts = (message.text or "").split()
+        if len(parts) < 2:
+            await message.reply_text("Usage: <code>.sessioninfo id</code>")
             return
-        ok, res = await start_extra_session(meta["session"], notify_client=client)
-        if not ok:
-            await message.reply_text(f"Start fail: <code>{res}</code>")
+        try:
+            uid = int(parts[1])
+        except ValueError:
+            await message.reply_text("Invalid id")
             return
         c = EXTRA.get(uid)
-    status = await message.reply_text("Dialogs count…")
-    counts = await count_dialogs(c)
-    meta = META.get(uid) or {}
-    if counts.get("error"):
-        await status.edit_text(f"Error: <code>{counts['error']}</code>")
-        return
-    await status.edit_text(
-        f"<b>SESSION INFO</b>\n"
-        f"Name: <b>{meta.get('name') or '—'}</b>\n"
-        f"User: @{meta.get('username') or '—'}\n"
-        f"ID: <code>{uid}</code>\n\n"
-        f"👥 Groups: <code>{counts['groups']}</code>\n"
-        f"📢 Channels: <code>{counts['channels']}</code>\n"
-        f"💬 DMs: <code>{counts['dms']}</code>\n"
-        f"🤖 Bots: <code>{counts['bots']}</code>\n"
-        f"📦 Total: <code>{counts['total']}</code>"
-    )
+        if not c:
+            await message.reply_text("Not online")
+            return
+        counts = await count_dialogs(c)
+        meta = META.get(uid) or {}
+        await message.reply_text(
+            f"<b>SESSION</b> <code>{uid}</code>\n"
+            f"{meta.get('name')}\n"
+            f"Groups: {counts.get('groups')} DMs: {counts.get('dms')}"
+        )
 
-
-@app.on_message(ub_cmd("sessionstop", "stopsession"))
-@owner_only
-async def sessionstop_cmd(client, message: Message):
-    parts = (message.text or "").split()
-    if len(parts) < 2:
-        await message.reply_text("Usage: <code>.sessionstop user_id</code>")
-        return
-    try:
-        uid = int(parts[1])
-    except ValueError:
-        await message.reply_text("Invalid id")
-        return
-    ok = await stop_extra_session(uid)
-    await message.reply_text("Stopped." if ok else "Not running.")
-
-
-@app.on_message(ub_cmd("sessionstart"))
-@owner_only
-async def sessionstart_cmd(client, message: Message):
-    parts = (message.text or "").split()
-    if len(parts) < 2:
-        await message.reply_text("Usage: <code>.sessionstart user_id</code>")
-        return
-    try:
-        uid = int(parts[1])
-    except ValueError:
-        await message.reply_text("Invalid id")
-        return
-    saved = await _load_all_sessions()
-    meta = saved.get(str(uid))
-    if not meta or not meta.get("session"):
-        await message.reply_text("Saved session nahi mili.")
-        return
-    ok, res = await start_extra_session(meta["session"], notify_client=client)
-    await message.reply_text(f"{'OK' if ok else 'FAIL'}: <code>{res}</code>")
+    @app.on_message(ub_cmd("sessionstop", "stopsession"))
+    @owner_only
+    async def sessionstop_cmd(client, message: Message):
+        parts = (message.text or "").split()
+        if len(parts) < 2:
+            await message.reply_text("Usage: <code>.sessionstop id</code>")
+            return
+        try:
+            uid = int(parts[1])
+        except ValueError:
+            await message.reply_text("Invalid id")
+            return
+        ok = await stop_extra_session(uid)
+        await message.reply_text("Stopped." if ok else "Not running.")
