@@ -289,7 +289,7 @@ async def heartart_cmd(client, message: Message):
 @app.on_message(ub_cmd("yourmom"), group=-8)
 async def yourmom_cmd(client, message: Message):
     m = await message.reply_text("🤱 Searching...")
-    await draw_art(m, YOURMOM_ART, header="🤱 VS YOUR MOM", footer="Done")
+    await draw_art(m, YOURMOM_ART, header="🤱 VS YOUR MOM", footer="TERI MAA MERE LAND PAR")
 
 
 @app.on_message(ub_cmd("myson"), group=-8)
