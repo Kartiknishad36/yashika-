@@ -43,7 +43,6 @@ def _uptime() -> str:
     return f"{h}h {m}m {s}s"
 
 
-# ─── FULL MENU (all commands together) ───
 HELP_FULL_1 = (
     f"✨💎 <b>{NAME.upper()} PREMIUM MENU</b> 💎✨\n"
     f"👑 Owner: {OWNER_TAG}\n"
@@ -120,7 +119,7 @@ HELP_FULL_2 = (
 )
 
 HELP_PAGES = {
-    "vc": HELP_FULL_1.split("🛡 <b>MOD</b>")[0] if False else (
+    "vc": (
         "🎵 <b>VC</b>\n▶️<code>.play</code> ⏭<code>.skip</code> ⏹<code>.stop</code>\n"
         "⏸<code>.pause</code> ▶️<code>.resume</code> 📋<code>.queue</code>\n"
         "🎤<code>.vcwelcome on/off</code>"
@@ -182,12 +181,15 @@ async def _do_help(message: Message):
             return
         await _send(message, f"✨ {page}")
         return
-    # sab commands ek sath (2 messages — Telegram limit)
-    await _send_multi(message, [HELP_FULL_1, HELP_FULL_2])
+    await _send(message, HELP_FULL_1)
+    await _send(message, HELP_FULL_2)
     print("[help] OK full")
 
 
-@app.on_message(filters.me & filters.text & filters.regex(r"^[.!]ping(\s|$)"), group=-10)
+@app.on_message(
+    filters.me & filters.text & filters.regex(r"^[.!]ping(\s|$)"),
+    group=-10,
+)
 async def ping_me(client, message: Message):
     t0 = time.time()
     try:
@@ -204,7 +206,10 @@ async def ping_me(client, message: Message):
         print(f"[ping] {e}")
 
 
-@app.on_message(filters.me & filters.text & filters.regex(r"^[.!]alive(\s|$)"), group=-10)
+@app.on_message(
+    filters.me & filters.text & filters.regex(r"^[.!]alive(\s|$)"),
+    group=-10,
+)
 async def alive_me(client, message: Message):
     try:
         me = await client.get_me()
@@ -223,7 +228,10 @@ async def alive_me(client, message: Message):
     )
 
 
-@app.on_message(filters.me & filters.text & filters.regex(r"^[.!]id(\s|$)"), group=-10)
+@app.on_message(
+    filters.me & filters.text & filters.regex(r"^[.!]id(\s|$)"),
+    group=-10,
+)
 async def id_me(client, message: Message):
     chat_id = message.chat.id if message.chat else 0
     user_id = (
@@ -237,20 +245,28 @@ async def id_me(client, message: Message):
     )
 
 
-@app.on_message(filters.me & filters.text & filters.regex(r"^[.!]uptime(\s|$)"), group=-10)
+@app.on_message(
+    filters.me & filters.text & filters.regex(r"^[.!]uptime(\s|$)"),
+    group=-10,
+)
 async def uptime_me(client, message: Message):
     await _send(message, f"⏱✨ Uptime: <code>{_uptime()}</code>")
 
 
 @app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!](help|menu|cmds|commands)(\s|$)"),
+    filters.me
+    & filters.text
+    & filters.regex(r"^[.!](help|menu|cmds|commands)(\s|$)"),
     group=-10,
 )
 async def help_me(client, message: Message):
     await _do_help(message)
 
 
-@app.on_message(filters.me & filters.text & filters.regex(r"^[.!]helpanim(\s|$)"), group=-10)
+@app.on_message(
+    filters.me & filters.text & filters.regex(r"^[.!]helpanim(\s|$)"),
+    group=-10,
+)
 async def helpanim_me(client, message: Message):
     frames = ["✨", "💎", "✨💎✨", "📖 Loading..."]
     try:
@@ -259,12 +275,13 @@ async def helpanim_me(client, message: Message):
             await asyncio.sleep(0.3)
             await msg.edit_text(f)
         await asyncio.sleep(0.3)
-        await msg.edit_text(HELP_FULL_1)
-        await _send(message, HELP_FULL_2)
+        await msg.delete()
     except Exception:
-        await _do_help(message)
+        pass
+    await _do_help(message)
 
 
+# Sudo-only path — NEVER for own account (filters.me already handled)
 @app.on_message(
     ub_cmd("ping", "alive", "id", "help", "menu", "cmds", "commands", "helpanim", "uptime"),
     group=-9,
@@ -272,9 +289,20 @@ async def helpanim_me(client, message: Message):
 async def core_ub(client, message: Message):
     if getattr(message, "outgoing", False):
         return
+    try:
+        uid = message.from_user.id if message.from_user else None
+        if uid and sudoers.ME_ID and uid == sudoers.ME_ID:
+            return
+        me = await client.get_me()
+        if uid and me and uid == me.id:
+            return
+    except Exception:
+        pass
     if not is_allowed(message):
         return
-    cmd = (message.command or [""])[0] if getattr(message, "command", None) else ""
+    cmd = ""
+    if getattr(message, "command", None):
+        cmd = (message.command or [""])[0]
     text = (message.text or "").strip()
     if not cmd and text:
         cmd = text[1:].split()[0].lower().split("@")[0]
