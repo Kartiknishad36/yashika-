@@ -1,73 +1,86 @@
 """
-Protect Content (userbot):
-  .protect on|off     — mode flag (status)
-  .protect            — reply to msg: us copy ko protect_content=True se bhejo
-  .psend <text>       — naya text protected bhejo
+Protect Content (userbot)
 
-Protected = forward / save / copy restrict (client support ke hisaab se).
+  .protect on|off|status
+  reply + .protect / .pcopy / .pfile  → protected copy
+  .psend <text>                       → protected text
+
+protect_content=True → forward/save/copy restrict (Telegram client support).
 """
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
-from modules.owner.sudoers import sudo_only
+from modules.owner.sudoers import ub_cmd, sudo_only
 from database.mongo import set_feature, get_feature
 
-PREFIXES = [".", "!"]
+
+async def _copy_protected(client, message: Message, src: Message):
+    try:
+        await src.copy(message.chat.id, protect_content=True)
+        try:
+            await message.delete()
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        await message.reply_text(f"❌ Protect fail: <code>{e}</code>")
+        return False
 
 
-@app.on_message(filters.command(["protect"], prefixes=PREFIXES))
+@app.on_message(ub_cmd("protect"))
 @sudo_only
 async def protect_cmd(client, message: Message):
-    # .protect on|off
-    if len(message.command) > 1 and message.command[1].lower() in (
+    parts = (message.text or "").split()
+
+    # on / off / status
+    if len(parts) > 1 and parts[1].lower() in (
         "on", "off", "1", "0", "enable", "disable", "status",
     ):
-        arg = message.command[1].lower()
-        if arg in ("status",):
+        arg = parts[1].lower()
+        if arg == "status":
             on = await get_feature("protect_content", False)
             await message.reply_text(
-                f"Protect mode flag: **{'ON' if on else 'OFF'}**\n"
-                f"Use reply + `.protect` or `.psend` to send protected."
+                f"╔══ 🛡 <b>PROTECT</b> ══╗\n"
+                f"Flag: <b>{'ON ✅' if on else 'OFF ❌'}</b>\n\n"
+                f"<code>.protect on|off</code>\n"
+                f"Reply + <code>.protect</code>\n"
+                f"<code>.psend text</code>\n"
+                f"Reply + <code>.pfile</code>\n"
+                f"╚══════════════╝"
             )
             return
         enable = arg in ("on", "1", "enable")
         await set_feature("protect_content", enable)
         await message.reply_text(
-            f"{'✅' if enable else '❌'} Protect flag **{'ON' if enable else 'OFF'}**.\n"
-            f"Protected msg: reply `.protect` | `.psend text`"
+            f"{'✅' if enable else '❌'} Protect flag <b>{'ON' if enable else 'OFF'}</b>\n"
+            f"Send: reply <code>.protect</code> | <code>.psend text</code>"
         )
         return
 
-    # reply → copy protected
+    # reply → protected copy
     if message.reply_to_message:
-        try:
-            await message.reply_to_message.copy(
-                message.chat.id,
-                protect_content=True,
-            )
-            try:
-                await message.delete()
-            except Exception:
-                pass
-        except Exception as e:
-            await message.reply_text(f"❌ Protect copy fail: `{e}`")
+        await _copy_protected(client, message, message.reply_to_message)
         return
 
+    on = await get_feature("protect_content", False)
     await message.reply_text(
-        "Usage:\n"
-        "`.protect on|off` — flag\n"
-        "Reply + `.protect` — protected copy\n"
-        "`.psend hello` — protected text"
+        f"╔══ 🛡 <b>PROTECT CONTENT</b> ══╗\n\n"
+        f"Flag: <b>{'ON' if on else 'OFF'}</b>\n\n"
+        f"• <code>.protect on|off|status</code>\n"
+        f"• Reply + <code>.protect</code> — protected copy\n"
+        f"• Reply + <code>.pcopy</code> / <code>.pfile</code>\n"
+        f"• <code>.psend your text</code>\n\n"
+        f"<i>Protected = save/forward limit (client dependent)</i>\n"
+        f"╚════════════════╝"
     )
 
 
-@app.on_message(filters.command(["psend"], prefixes=PREFIXES))
+@app.on_message(ub_cmd("psend", "ptext"))
 @sudo_only
 async def psend_cmd(client, message: Message):
     parts = (message.text or "").split(None, 1)
     if len(parts) < 2:
-        await message.reply_text("Usage: `.psend your text`")
+        await message.reply_text("Usage: <code>.psend your text here</code>")
         return
     text = parts[1]
     try:
@@ -81,22 +94,14 @@ async def psend_cmd(client, message: Message):
         except Exception:
             pass
     except Exception as e:
-        await message.reply_text(f"❌ `{e}`")
+        await message.reply_text(f"❌ <code>{e}</code>")
 
 
-@app.on_message(filters.command(["pfile"], prefixes=PREFIXES))
+@app.on_message(ub_cmd("pfile", "pcopy", "pmedia"))
 @sudo_only
 async def pfile_cmd(client, message: Message):
-    """Reply to photo/video/doc → re-send protected."""
     r = message.reply_to_message
     if not r:
-        await message.reply_text("Reply to a media with `.pfile`")
+        await message.reply_text("Reply to media/msg + <code>.pfile</code>")
         return
-    try:
-        await r.copy(message.chat.id, protect_content=True)
-        try:
-            await message.delete()
-        except Exception:
-            pass
-    except Exception as e:
-        await message.reply_text(f"❌ `{e}`")
+    await _copy_protected(client, message, r)
