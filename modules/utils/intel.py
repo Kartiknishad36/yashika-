@@ -37,8 +37,7 @@ async def msginfo_cmd(client, message: Message):
     if r.forward_from_chat:
         fc = r.forward_from_chat
         fwd = "Yes"
-        fwd_detail = f"{fc.title or fc.id} (<code>{fc.id}</code>)
-{ _link(fc) }"
+        fwd_detail = f"{fc.title or fc.id} (<code>{fc.id}</code>)\n{_link(fc)}"
     elif r.forward_from:
         fu = r.forward_from
         fwd = "Yes"
