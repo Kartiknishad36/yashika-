@@ -135,7 +135,6 @@ MYSON_ART = r"""
      / ╰    ╯ \ /    \>
 """
 
-# Moon phases → full moon art
 MOON_PHASES = [
     "🌑  New Moon...",
     "🌒  Waxing Crescent...",
@@ -147,18 +146,17 @@ MOON_PHASES = [
 MOON_ART = r"""
             .          .
      .             *        .
-          .     .-"""""-.      *
-      *       .'  🌕   '.        .
+          .     .=======.      *
+      *       .  FULL  MOON .        .
            . /    moon    \  .
-            |   ✨   ✨   |      *
+            |   *     *   |      *
          *   \    night  /   .
-              '.       .'
-        .       '-...-'      *
+              .       .
+        .       =======      *
               *         .
          .         *          .
 """
 
-# Heart build frames + big heart art
 HEART_BUILD = [
     "❤️",
     "  ❤️\n❤️  ❤️",
