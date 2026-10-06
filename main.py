@@ -50,6 +50,7 @@ MODULES = [
 
     "modules.utils.basics",
     "modules.utils.info",
+    "modules.utils.intel",
     "modules.utils.user_scan",
     "modules.utils.mongo_dp",
     "modules.utils.fun",
