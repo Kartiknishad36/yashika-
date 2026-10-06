@@ -1,320 +1,162 @@
 """
-basics — ping / alive / id / help
-Premium emoji menu — sab commands ek sath.
+Core: .ping .alive .id .help .uptime — always work
 """
 import asyncio
 import time
 
-from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
 from config import BOT_NAME, OWNER_USERNAME
 from modules.owner import sudoers
-from modules.owner.sudoers import ub_cmd, is_allowed
+from modules.owner.sudoers import ub_cmd
 
 NAME = BOT_NAME or "Yashika"
 OWNER_TAG = f"@{OWNER_USERNAME}" if OWNER_USERNAME else "Owner"
-_START_TS = time.time()
-
-
-async def _send(message: Message, text: str):
-    try:
-        await message.reply_text(text)
-        return
-    except Exception as e:
-        print(f"[basics reply] {e}")
-    try:
-        await app.send_message(message.chat.id, text)
-    except Exception as e:
-        print(f"[basics send] {e}")
-
-
-async def _send_multi(message: Message, parts: list):
-    for p in parts:
-        await _send(message, p)
-        await asyncio.sleep(0.35)
+_START = time.time()
 
 
 def _uptime() -> str:
-    s = int(time.time() - _START_TS)
+    s = int(time.time() - _START)
     h, s = divmod(s, 3600)
     m, s = divmod(s, 60)
     return f"{h}h {m}m {s}s"
 
 
-HELP_FULL_1 = (
-    f"✨💎 <b>{NAME.upper()} PREMIUM MENU</b> 💎✨\n"
-    f"👑 Owner: {OWNER_TAG}\n"
-    f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    f"⚙️ <b>SYSTEM</b>\n"
-    f"🏓 <code>.ping</code>  ·  💚 <code>.alive</code>\n"
-    f"🆔 <code>.id</code>  ·  ⏱ <code>.uptime</code>\n"
-    f"📖 <code>.help</code>  ·  ✨ <code>.helpanim</code>\n\n"
-    f"🎵 <b>VC / MUSIC</b>\n"
-    f"▶️ <code>.play</code>  ⏭ <code>.skip</code>  ⏹ <code>.stop</code>\n"
-    f"⏸ <code>.pause</code>  ▶️ <code>.resume</code>  📋 <code>.queue</code>\n"
-    f"🎤 <code>.vcwelcome on/off</code>\n\n"
-    f"👑 <b>OWNER / SUDO</b>\n"
-    f"➕ <code>.addsudo</code>  ➖ <code>.delsudo</code>\n"
-    f"📜 <code>.sudolist</code>\n\n"
-    f"🔐 <b>LOGIN</b>\n"
-    f"📱 <code>.login</code>  🔑 <code>.addsession</code>\n"
-    f"📋 <code>.sessions</code>  ℹ️ <code>.sessioninfo</code>\n"
-    f"⏹ <code>.sessionstop</code>  ▶️ <code>.sessionstart</code>\n"
-    f"❌ <code>.cancellogin</code>\n\n"
-    f"🛡 <b>MOD</b>\n"
-    f"🔨 <code>.ban</code>  ✅ <code>.unban</code>  👢 <code>.kick</code>\n"
-    f"🔇 <code>.mute</code>  🔊 <code>.unmute</code>\n"
-    f"⬆️ <code>.promote</code>  ⬇️ <code>.demote</code>\n"
-    f"📌 <code>.pin</code>  📍 <code>.unpin</code>\n\n"
-    f"📣 <b>TAG</b>\n"
-    f"👥 <code>.tagall</code> [text]  — batch\n"
-    f"👤 <code>.tag</code> [text]  — one by one\n"
-    f"🛑 <code>.tagallstop</code>  <code>.tagstop</code>\n"
-    f"🛡 <code>.tagadmins</code>  🙋 <code>.tagme</code>\n"
-)
-
-HELP_FULL_2 = (
-    f"🌐 <b>GLOBAL</b>\n"
-    f"⛔ <code>.gban</code>  ✅ <code>.ungban</code>  📜 <code>.gbanlist</code>\n"
-    f"⚠️ <code>.warn</code>  ♻️ <code>.unwarn</code>  📋 <code>.warns</code>\n\n"
-    f"📢 <b>BROADCAST</b>\n"
-    f"📡 <code>.broadcast</code>  🌍 <code>.gcast</code>  💬 <code>.dmcast</code>\n\n"
-    f"👤 <b>CLONE</b>\n"
-    f"🎭 <code>.clonemode</code>  📋 <code>.clone</code>  🔙 <code>.back</code>\n\n"
-    f"👋 <b>WELCOME</b>\n"
-    f"✅ <code>.welcome on/off</code>\n"
-    f"✏️ <code>.setwelcome</code>\n"
-    f"🎤 <code>.vcwelcome on/off</code>\n\n"
-    f"💤 <b>AFK</b>\n"
-    f"🌙 <code>.afk</code>  ☀️ <code>.unafk</code>  🔙 <code>.back</code>\n\n"
-    f"🛠 <b>TOOLS</b>\n"
-    f"🔢 <code>.calc</code>  🕐 <code>.time</code>  🌤 <code>.weather</code>\n"
-    f"🌐 <code>.tr</code>  📞 <code>.nuinfo</code>\n"
-    f"📷 <code>.qr</code>  📄 <code>.paste</code>\n\n"
-    f"🎨 <b>FUN / ARTS</b>\n"
-    f"🐈 <code>.cat</code>  🌹 <code>.rose</code>  💻 <code>.hacker</code>\n"
-    f"⚠️ <code>.error</code>  🖕 <code>.fuck</code>  🦋 <code>.butterfly</code>\n"
-    f"❤️ <code>.love</code>  🌕 <code>.moon</code>  💖 <code>.heart</code>\n"
-    f"🐰 <code>.myson</code>  🤱 <code>.yourmom</code>  🎨 <code>.funhelp</code>\n\n"
-    f"ℹ️ <b>INFO</b>\n"
-    f"👤 <code>.info</code>  📊 <code>.user</code>\n"
-    f"💬 <code>.msginfo</code>  🏷 <code>.chatinfo</code>  🔗 <code>.common</code>\n\n"
-    f"🛡 <b>PROTECT</b>\n"
-    f"🔒 <code>.protect on/off</code>  ✉️ <code>.psend</code>  📎 <code>.pfile</code>\n\n"
-    f"🖼 <b>MEDIA</b>\n"
-    f"🎗 <code>.kang</code>  🖼 <code>.dp</code>  💾 <code>.dpsave</code>\n\n"
-    f"📍 <b>TRACK</b>\n"
-    f"👁 <code>.track</code>  ➕ <code>.trackadd</code>  ➖ <code>.trackdel</code>\n\n"
-    f"🚫 <b>ANTI</b>\n"
-    f"🔗 <code>.antilink</code>  🗑 <code>.antidelete</code>  🌊 <code>.antiflood</code>\n\n"
-    f"📝 <b>NOTES</b>  ·  💰 <b>ECONOMY</b>  ·  💬 <b>PM</b>\n"
-    f"💾 <code>.save</code> <code>.get</code> <code>.notes</code>\n"
-    f"💵 <code>.bal</code> <code>.daily</code> <code>.rob</code>\n"
-    f"✅ <code>.approve</code> <code>.unapprove</code> <code>.approved</code>\n\n"
-    f"━━━━━━━━━━━━━━━━━━━━━━\n"
-    f"✨ Page: <code>.help fun</code> <code>.help mod</code> …\n"
-    f"💎 <b>{NAME}</b> · Premium Userbot"
-)
-
-HELP_PAGES = {
-    "vc": (
-        "🎵 <b>VC</b>\n▶️<code>.play</code> ⏭<code>.skip</code> ⏹<code>.stop</code>\n"
-        "⏸<code>.pause</code> ▶️<code>.resume</code> 📋<code>.queue</code>\n"
-        "🎤<code>.vcwelcome on/off</code>"
-    ),
-    "owner": "👑 <b>OWNER</b>\n➕<code>.addsudo</code> ➖<code>.delsudo</code> 📜<code>.sudolist</code>",
-    "login": (
-        "🔐 <b>LOGIN</b>\n📱<code>.login</code> 🔑<code>.addsession</code>\n"
-        "📋<code>.sessions</code> ℹ️<code>.sessioninfo</code>\n"
-        "⏹<code>.sessionstop</code> ▶️<code>.sessionstart</code> ❌<code>.cancellogin</code>"
-    ),
-    "mod": (
-        "🛡 <b>MOD + TAG</b>\n"
-        "🔨<code>.ban</code> ✅<code>.unban</code> 👢<code>.kick</code>\n"
-        "🔇<code>.mute</code> 🔊<code>.unmute</code>\n"
-        "⬆️<code>.promote</code> ⬇️<code>.demote</code>\n"
-        "📌<code>.pin</code> 📍<code>.unpin</code>\n"
-        "👥<code>.tagall</code> 👤<code>.tag</code> 🛑<code>.tagstop</code>\n"
-        "🛡<code>.tagadmins</code> 🙋<code>.tagme</code>"
-    ),
-    "global": "🌐 <b>GLOBAL</b>\n⛔<code>.gban</code> ✅<code>.ungban</code> ⚠️<code>.warn</code> ♻️<code>.unwarn</code>",
-    "cast": "📢 <b>CAST</b>\n📡<code>.broadcast</code> 🌍<code>.gcast</code> 💬<code>.dmcast</code>",
-    "clone": "👤 <b>CLONE</b>\n🎭<code>.clonemode</code> 📋<code>.clone</code> 🔙<code>.back</code>",
-    "welcome": "👋 <b>WELCOME</b>\n✅<code>.welcome on/off</code> ✏️<code>.setwelcome</code> 🎤<code>.vcwelcome</code>",
-    "afk": "💤 <b>AFK</b>\n🌙<code>.afk</code> ☀️<code>.unafk</code> 🔙<code>.back</code>",
-    "tools": "🛠 <b>TOOLS</b>\n🔢<code>.calc</code> 🕐<code>.time</code> 🌤<code>.weather</code> 🌐<code>.tr</code> 📞<code>.nuinfo</code>",
-    "fun": (
-        "🎨 <b>FUN</b>\n🐈<code>.cat</code> 🌹<code>.rose</code> 💻<code>.hacker</code>\n"
-        "⚠️<code>.error</code> 🖕<code>.fuck</code> 🦋<code>.butterfly</code>\n"
-        "❤️<code>.love</code> 🌕<code>.moon</code> 💖<code>.heart</code>\n"
-        "🐰<code>.myson</code> 🤱<code>.yourmom</code> 🎨<code>.funhelp</code>"
-    ),
-    "system": "⚙️ <b>SYSTEM</b>\n🏓<code>.ping</code> 💚<code>.alive</code> 🆔<code>.id</code> ⏱<code>.uptime</code>",
-    "info": "ℹ️ <b>INFO</b>\n👤<code>.info</code> 📊<code>.user</code> 💬<code>.msginfo</code> 🏷<code>.chatinfo</code>",
-    "protect": "🛡 <b>PROTECT</b>\n🔒<code>.protect</code> ✉️<code>.psend</code> 📎<code>.pfile</code>",
-    "media": "🖼 <b>MEDIA</b>\n🎗<code>.kang</code> 🖼<code>.dp</code> 💾<code>.dpsave</code>",
-    "track": "📍 <b>TRACK</b>\n👁<code>.track</code> ➕<code>.trackadd</code> ➖<code>.trackdel</code>",
-    "anti": "🚫 <b>ANTI</b>\n🔗<code>.antilink</code> 🗑<code>.antidelete</code> 🌊<code>.antiflood</code>",
-    "notes": "📝 <b>NOTES</b>\n💾<code>.save</code> 📥<code>.get</code> 📋<code>.notes</code>",
-    "economy": "💰 <b>ECONOMY</b>\n💵<code>.bal</code> 🎁<code>.daily</code> 🔫<code>.rob</code>",
-    "pm": "💬 <b>PM</b>\n✅<code>.approve</code> ❌<code>.unapprove</code> 📜<code>.approved</code>",
-    "bro": "🤝 <b>BRO</b>\n<code>.bro</code> <code>.unbro</code> <code>.brolist</code>",
-}
-HELP_PAGES["tag"] = HELP_PAGES["mod"]
-HELP_PAGES["arts"] = HELP_PAGES["fun"]
-HELP_PAGES["anim"] = HELP_PAGES["fun"]
-HELP_PAGES["anims"] = HELP_PAGES["fun"]
-HELP_PAGES["spy"] = HELP_PAGES["info"]
-HELP_PAGES["warn"] = HELP_PAGES["global"]
-HELP_PAGES["ghost"] = HELP_PAGES["track"]
-
-
-async def _do_help(message: Message):
-    parts = (message.text or "").split()
-    if len(parts) > 1:
-        key = parts[1].lower()
-        page = HELP_PAGES.get(key)
-        if not page:
-            await _send(message, f"❌ Unknown · try <code>.help</code>")
-            return
-        await _send(message, f"✨ {page}")
-        return
-    await _send(message, HELP_FULL_1)
-    await _send(message, HELP_FULL_2)
-    print("[help] OK full")
-
-
-@app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!]ping(\s|$)"),
-    group=-10,
-)
-async def ping_me(client, message: Message):
-    t0 = time.time()
+async def _reply(message: Message, text: str):
     try:
-        m = await message.reply_text("💎✨ Pinging...")
-        ms = (time.time() - t0) * 1000
-        prem = "✅" if getattr(await client.get_me(), "is_premium", False) else "❌"
-        await m.edit_text(
-            f"🏓 <b>PONG!</b> ✨\n"
-            f"⚡ <code>{ms:.0f}ms</code>\n"
-            f"⏱ <code>{_uptime()}</code>\n"
-            f"💎 Premium: {prem}"
-        )
+        await message.reply_text(text)
     except Exception as e:
-        print(f"[ping] {e}")
+        print(f"[basics] reply fail: {e}")
+        try:
+            await app.send_message(message.chat.id, text)
+        except Exception as e2:
+            print(f"[basics] send fail: {e2}")
 
 
-@app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!]alive(\s|$)"),
-    group=-10,
+HELP_1 = (
+    f"✨💎 <b>{NAME.upper()} MENU</b> 💎✨\n"
+    f"👑 {OWNER_TAG}\n"
+    f"━━━━━━━━━━━━━━━━━━━━\n\n"
+    f"⚙️ <b>SYSTEM</b>\n"
+    f"<code>.ping</code> <code>.alive</code> <code>.id</code> <code>.uptime</code>\n"
+    f"<code>.help</code> <code>.help fun</code>\n\n"
+    f"🎵 <b>VC</b>\n"
+    f"<code>.play</code> <code>.skip</code> <code>.stop</code> <code>.pause</code> <code>.resume</code> <code>.queue</code>\n"
+    f"<code>.vcwelcome on/off</code>\n\n"
+    f"👑 <b>OWNER</b>\n"
+    f"<code>.addsudo</code> <code>.delsudo</code> <code>.sudolist</code>\n\n"
+    f"🔐 <b>LOGIN</b>\n"
+    f"<code>.login</code> <code>.addsession</code> <code>.sessions</code>\n"
+    f"<code>.sessioninfo</code> <code>.sessionstop</code> <code>.sessionstart</code>\n\n"
+    f"🛡 <b>MOD</b>\n"
+    f"<code>.ban</code> <code>.unban</code> <code>.kick</code> <code>.mute</code> <code>.unmute</code>\n"
+    f"<code>.promote</code> <code>.demote</code> <code>.pin</code> <code>.unpin</code>\n\n"
+    f"📣 <b>TAG</b>\n"
+    f"<code>.tagall</code> <code>.tag</code> <code>.tagstop</code> <code>.tagadmins</code> <code>.tagme</code>\n"
 )
-async def alive_me(client, message: Message):
+
+HELP_2 = (
+    f"🌐 <b>GLOBAL</b>\n"
+    f"<code>.gban</code> <code>.ungban</code> <code>.warn</code> <code>.unwarn</code>\n\n"
+    f"📢 <b>CAST</b>\n"
+    f"<code>.broadcast</code> <code>.gcast</code> <code>.dmcast</code>\n\n"
+    f"👤 <b>CLONE</b>\n"
+    f"<code>.clone</code> <code>.clonemode</code> <code>.back</code>\n\n"
+    f"👋 <b>WELCOME / AFK</b>\n"
+    f"<code>.welcome on/off</code> <code>.setwelcome</code>\n"
+    f"<code>.afk</code> <code>.unafk</code>\n\n"
+    f"🛠 <b>TOOLS</b>\n"
+    f"<code>.calc</code> <code>.time</code> <code>.weather</code> <code>.tr</code> <code>.nuinfo</code>\n\n"
+    f"🎨 <b>FUN</b>\n"
+    f"<code>.cat</code> <code>.rose</code> <code>.hacker</code> <code>.moon</code> <code>.heart</code>\n"
+    f"<code>.love</code> <code>.butterfly</code> <code>.funhelp</code>\n\n"
+    f"ℹ️ <b>INFO</b>\n"
+    f"<code>.info</code> <code>.user</code> <code>.msginfo</code> <code>.chatinfo</code> <code>.common</code>\n\n"
+    f"🛡 <b>PROTECT / MEDIA</b>\n"
+    f"<code>.protect</code> <code>.psend</code> <code>.kang</code> <code>.dp</code>\n\n"
+    f"💎 {NAME} Userbot"
+)
+
+PAGES = {
+    "fun": "🎨 <code>.cat</code> <code>.rose</code> <code>.hacker</code> <code>.moon</code> <code>.heart</code> <code>.love</code>",
+    "mod": "🛡 <code>.ban</code> <code>.kick</code> <code>.mute</code> <code>.tagall</code> <code>.tag</code>",
+    "vc": "🎵 <code>.play</code> <code>.skip</code> <code>.stop</code> <code>.vcwelcome</code>",
+    "info": "ℹ️ <code>.info</code> <code>.user</code> <code>.msginfo</code> <code>.chatinfo</code>",
+}
+
+
+@app.on_message(ub_cmd("ping"), group=-20)
+async def cmd_ping(client, message: Message):
+    t0 = time.time()
+    m = await message.reply_text("💎 …")
+    ms = (time.time() - t0) * 1000
     try:
-        me = await client.get_me()
-        prem = "✅" if getattr(me, "is_premium", False) else "❌"
-        uname = f"@{me.username}" if me.username else "—"
+        prem = "✅" if getattr(await client.get_me(), "is_premium", False) else "❌"
     except Exception:
-        prem, uname = "?", "—"
-    await _send(
-        message,
-        f"💚✨ <b>{NAME}</b> is <b>ALIVE</b> ✨\n"
-        f"👤 {uname}\n"
-        f"💎 Premium: {prem}\n"
-        f"⏱ <code>{_uptime()}</code>\n"
-        f"👑 {OWNER_TAG}\n"
-        f"📖 <code>.help</code>",
+        prem = "?"
+    await m.edit_text(
+        f"🏓 <b>PONG</b>\n⚡ <code>{ms:.0f}ms</code>\n⏱ <code>{_uptime()}</code>\n💎 Premium: {prem}"
     )
 
 
-@app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!]id(\s|$)"),
-    group=-10,
-)
-async def id_me(client, message: Message):
-    chat_id = message.chat.id if message.chat else 0
-    user_id = (
+@app.on_message(ub_cmd("alive"), group=-20)
+async def cmd_alive(client, message: Message):
+    try:
+        me = await client.get_me()
+        prem = "✅" if getattr(me, "is_premium", False) else "❌"
+        un = f"@{me.username}" if me.username else "—"
+    except Exception:
+        prem, un = "?", "—"
+    await _reply(
+        message,
+        f"💚 <b>{NAME}</b> ALIVE\n👤 {un}\n💎 {prem}\n⏱ <code>{_uptime()}</code>\n👑 {OWNER_TAG}",
+    )
+
+
+@app.on_message(ub_cmd("id"), group=-20)
+async def cmd_id(client, message: Message):
+    cid = message.chat.id if message.chat else 0
+    uid = (
         message.reply_to_message.from_user.id
         if message.reply_to_message and message.reply_to_message.from_user
         else (message.from_user.id if message.from_user else sudoers.ME_ID)
     )
-    await _send(
-        message,
-        f"🆔 <b>IDs</b>\n💬 Chat: <code>{chat_id}</code>\n👤 User: <code>{user_id}</code>",
-    )
+    await _reply(message, f"🆔 Chat: <code>{cid}</code>\n👤 User: <code>{uid}</code>")
 
 
-@app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!]uptime(\s|$)"),
-    group=-10,
-)
-async def uptime_me(client, message: Message):
-    await _send(message, f"⏱✨ Uptime: <code>{_uptime()}</code>")
+@app.on_message(ub_cmd("uptime"), group=-20)
+async def cmd_uptime(client, message: Message):
+    await _reply(message, f"⏱ Uptime: <code>{_uptime()}</code>")
 
 
-@app.on_message(
-    filters.me
-    & filters.text
-    & filters.regex(r"^[.!](help|menu|cmds|commands)(\s|$)"),
-    group=-10,
-)
-async def help_me(client, message: Message):
-    await _do_help(message)
+@app.on_message(ub_cmd("help", "menu", "cmds", "commands"), group=-20)
+async def cmd_help(client, message: Message):
+    parts = (message.text or "").split()
+    if len(parts) > 1:
+        key = parts[1].lower()
+        page = PAGES.get(key)
+        if page:
+            await _reply(message, page)
+            return
+        await _reply(message, f"❌ Unknown page. Try <code>.help</code>")
+        return
+    await _reply(message, HELP_1)
+    await asyncio.sleep(0.3)
+    await _reply(message, HELP_2)
 
 
-@app.on_message(
-    filters.me & filters.text & filters.regex(r"^[.!]helpanim(\s|$)"),
-    group=-10,
-)
-async def helpanim_me(client, message: Message):
-    frames = ["✨", "💎", "✨💎✨", "📖 Loading..."]
+@app.on_message(ub_cmd("helpanim"), group=-20)
+async def cmd_helpanim(client, message: Message):
     try:
-        msg = await message.reply_text(frames[0])
-        for f in frames[1:]:
-            await asyncio.sleep(0.3)
-            await msg.edit_text(f)
-        await asyncio.sleep(0.3)
-        await msg.delete()
+        m = await message.reply_text("✨")
+        await asyncio.sleep(0.25)
+        await m.edit_text("💎")
+        await asyncio.sleep(0.25)
+        await m.delete()
     except Exception:
         pass
-    await _do_help(message)
+    await cmd_help(client, message)
 
 
-# Sudo-only path — NEVER for own account (filters.me already handled)
-@app.on_message(
-    ub_cmd("ping", "alive", "id", "help", "menu", "cmds", "commands", "helpanim", "uptime"),
-    group=-9,
-)
-async def core_ub(client, message: Message):
-    if getattr(message, "outgoing", False):
-        return
-    try:
-        uid = message.from_user.id if message.from_user else None
-        if uid and sudoers.ME_ID and uid == sudoers.ME_ID:
-            return
-        me = await client.get_me()
-        if uid and me and uid == me.id:
-            return
-    except Exception:
-        pass
-    if not is_allowed(message):
-        return
-    cmd = ""
-    if getattr(message, "command", None):
-        cmd = (message.command or [""])[0]
-    text = (message.text or "").strip()
-    if not cmd and text:
-        cmd = text[1:].split()[0].lower().split("@")[0]
-    if cmd == "ping":
-        await ping_me(client, message)
-    elif cmd == "alive":
-        await alive_me(client, message)
-    elif cmd == "id":
-        await id_me(client, message)
-    elif cmd == "uptime":
-        await uptime_me(client, message)
-    elif cmd in ("help", "menu", "cmds", "commands"):
-        await _do_help(message)
-    elif cmd == "helpanim":
-        await helpanim_me(client, message)
+print("[basics] ping/alive/id/help loaded")
