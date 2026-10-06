@@ -9,7 +9,6 @@ if not STRING_SESSION:
     sys.exit(1)
 
 # Single client: commands + VC + music
-# sleep_threshold: FloodWait <= 120s auto-wait (Telegram throttle after restart)
 app = Client(
     name="userbot-session",
     api_id=API_ID,
@@ -17,7 +16,7 @@ app = Client(
     session_string=STRING_SESSION,
     parse_mode=ParseMode.HTML,
     in_memory=True,
-    workers=2,
+    workers=8,
     sleep_threshold=120,
     max_concurrent_transmissions=2,
 )
