@@ -1,10 +1,9 @@
 """
-basics — ping / alive / id / help — MUST always work for owner userbot
-Premium command center with full pages.
+basics — ping / alive / id / help
+Premium emoji menu — sab commands ek sath.
 """
 import asyncio
 import time
-from datetime import datetime, timezone
 
 from pyrogram import filters
 from pyrogram.types import Message
@@ -31,6 +30,12 @@ async def _send(message: Message, text: str):
         print(f"[basics send] {e}")
 
 
+async def _send_multi(message: Message, parts: list):
+    for p in parts:
+        await _send(message, p)
+        await asyncio.sleep(0.35)
+
+
 def _uptime() -> str:
     s = int(time.time() - _START_TS)
     h, s = divmod(s, 3600)
@@ -38,221 +43,133 @@ def _uptime() -> str:
     return f"{h}h {m}m {s}s"
 
 
-HELP_INDEX = (
-    f"╔══ 💎 <b>{NAME.upper()} PREMIUM</b> ══╗\n"
-    f"Owner: {OWNER_TAG}\n"
-    f"━━━━━━━━━━━━━━━━━━━━\n"
-    f"01 <code>.help vc</code> — Music / VC\n"
-    f"02 <code>.help owner</code> — Owner / Sudo\n"
-    f"03 <code>.help login</code> — Multi login\n"
-    f"04 <code>.help mod</code> — Ban / Mute / Tag\n"
-    f"05 <code>.help global</code> — Gban / Warn\n"
-    f"06 <code>.help cast</code> — Broadcast\n"
-    f"07 <code>.help clone</code> — Clone profile\n"
-    f"08 <code>.help welcome</code> — Welcome / VC\n"
-    f"09 <code>.help afk</code> — AFK\n"
-    f"10 <code>.help tools</code> — Tools\n"
-    f"11 <code>.help fun</code> — Arts / Anim\n"
-    f"12 <code>.help system</code> — Core\n"
-    f"13 <code>.help info</code> — User info\n"
-    f"14 <code>.help protect</code> — Protect\n"
-    f"15 <code>.help media</code> — Media\n"
-    f"16 <code>.help track</code> — Tracker\n"
-    f"17 <code>.help anti</code> — Anti modules\n"
-    f"18 <code>.help notes</code> — Notes\n"
-    f"19 <code>.help economy</code> — Economy\n"
-    f"20 <code>.help pm</code> — PM guard\n"
-    f"━━━━━━━━━━━━━━━━━━━━\n"
-    f"Quick: <code>.ping</code> <code>.alive</code> <code>.id</code>\n"
-    f"╚══════════════════╝"
+# ─── FULL MENU (all commands together) ───
+HELP_FULL_1 = (
+    f"✨💎 <b>{NAME.upper()} PREMIUM MENU</b> 💎✨\n"
+    f"👑 Owner: {OWNER_TAG}\n"
+    f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    f"⚙️ <b>SYSTEM</b>\n"
+    f"🏓 <code>.ping</code>  ·  💚 <code>.alive</code>\n"
+    f"🆔 <code>.id</code>  ·  ⏱ <code>.uptime</code>\n"
+    f"📖 <code>.help</code>  ·  ✨ <code>.helpanim</code>\n\n"
+    f"🎵 <b>VC / MUSIC</b>\n"
+    f"▶️ <code>.play</code>  ⏭ <code>.skip</code>  ⏹ <code>.stop</code>\n"
+    f"⏸ <code>.pause</code>  ▶️ <code>.resume</code>  📋 <code>.queue</code>\n"
+    f"🎤 <code>.vcwelcome on/off</code>\n\n"
+    f"👑 <b>OWNER / SUDO</b>\n"
+    f"➕ <code>.addsudo</code>  ➖ <code>.delsudo</code>\n"
+    f"📜 <code>.sudolist</code>\n\n"
+    f"🔐 <b>LOGIN</b>\n"
+    f"📱 <code>.login</code>  🔑 <code>.addsession</code>\n"
+    f"📋 <code>.sessions</code>  ℹ️ <code>.sessioninfo</code>\n"
+    f"⏹ <code>.sessionstop</code>  ▶️ <code>.sessionstart</code>\n"
+    f"❌ <code>.cancellogin</code>\n\n"
+    f"🛡 <b>MOD</b>\n"
+    f"🔨 <code>.ban</code>  ✅ <code>.unban</code>  👢 <code>.kick</code>\n"
+    f"🔇 <code>.mute</code>  🔊 <code>.unmute</code>\n"
+    f"⬆️ <code>.promote</code>  ⬇️ <code>.demote</code>\n"
+    f"📌 <code>.pin</code>  📍 <code>.unpin</code>\n\n"
+    f"📣 <b>TAG</b>\n"
+    f"👥 <code>.tagall</code> [text]  — batch\n"
+    f"👤 <code>.tag</code> [text]  — one by one\n"
+    f"🛑 <code>.tagallstop</code>  <code>.tagstop</code>\n"
+    f"🛡 <code>.tagadmins</code>  🙋 <code>.tagme</code>\n"
+)
+
+HELP_FULL_2 = (
+    f"🌐 <b>GLOBAL</b>\n"
+    f"⛔ <code>.gban</code>  ✅ <code>.ungban</code>  📜 <code>.gbanlist</code>\n"
+    f"⚠️ <code>.warn</code>  ♻️ <code>.unwarn</code>  📋 <code>.warns</code>\n\n"
+    f"📢 <b>BROADCAST</b>\n"
+    f"📡 <code>.broadcast</code>  🌍 <code>.gcast</code>  💬 <code>.dmcast</code>\n\n"
+    f"👤 <b>CLONE</b>\n"
+    f"🎭 <code>.clonemode</code>  📋 <code>.clone</code>  🔙 <code>.back</code>\n\n"
+    f"👋 <b>WELCOME</b>\n"
+    f"✅ <code>.welcome on/off</code>\n"
+    f"✏️ <code>.setwelcome</code>\n"
+    f"🎤 <code>.vcwelcome on/off</code>\n\n"
+    f"💤 <b>AFK</b>\n"
+    f"🌙 <code>.afk</code>  ☀️ <code>.unafk</code>  🔙 <code>.back</code>\n\n"
+    f"🛠 <b>TOOLS</b>\n"
+    f"🔢 <code>.calc</code>  🕐 <code>.time</code>  🌤 <code>.weather</code>\n"
+    f"🌐 <code>.tr</code>  📞 <code>.nuinfo</code>\n"
+    f"📷 <code>.qr</code>  📄 <code>.paste</code>\n\n"
+    f"🎨 <b>FUN / ARTS</b>\n"
+    f"🐈 <code>.cat</code>  🌹 <code>.rose</code>  💻 <code>.hacker</code>\n"
+    f"⚠️ <code>.error</code>  🖕 <code>.fuck</code>  🦋 <code>.butterfly</code>\n"
+    f"❤️ <code>.love</code>  🌕 <code>.moon</code>  💖 <code>.heart</code>\n"
+    f"🐰 <code>.myson</code>  🤱 <code>.yourmom</code>  🎨 <code>.funhelp</code>\n\n"
+    f"ℹ️ <b>INFO</b>\n"
+    f"👤 <code>.info</code>  📊 <code>.user</code>\n"
+    f"💬 <code>.msginfo</code>  🏷 <code>.chatinfo</code>  🔗 <code>.common</code>\n\n"
+    f"🛡 <b>PROTECT</b>\n"
+    f"🔒 <code>.protect on/off</code>  ✉️ <code>.psend</code>  📎 <code>.pfile</code>\n\n"
+    f"🖼 <b>MEDIA</b>\n"
+    f"🎗 <code>.kang</code>  🖼 <code>.dp</code>  💾 <code>.dpsave</code>\n\n"
+    f"📍 <b>TRACK</b>\n"
+    f"👁 <code>.track</code>  ➕ <code>.trackadd</code>  ➖ <code>.trackdel</code>\n\n"
+    f"🚫 <b>ANTI</b>\n"
+    f"🔗 <code>.antilink</code>  🗑 <code>.antidelete</code>  🌊 <code>.antiflood</code>\n\n"
+    f"📝 <b>NOTES</b>  ·  💰 <b>ECONOMY</b>  ·  💬 <b>PM</b>\n"
+    f"💾 <code>.save</code> <code>.get</code> <code>.notes</code>\n"
+    f"💵 <code>.bal</code> <code>.daily</code> <code>.rob</code>\n"
+    f"✅ <code>.approve</code> <code>.unapprove</code> <code>.approved</code>\n\n"
+    f"━━━━━━━━━━━━━━━━━━━━━━\n"
+    f"✨ Page: <code>.help fun</code> <code>.help mod</code> …\n"
+    f"💎 <b>{NAME}</b> · Premium Userbot"
 )
 
 HELP_PAGES = {
-    "vc": (
-        "╔══ 🎵 <b>VC / MUSIC</b> ══╗\n"
-        "<code>.play</code> — play song\n"
-        "<code>.skip</code> <code>.stop</code>\n"
-        "<code>.pause</code> <code>.resume</code>\n"
-        "<code>.queue</code>\n"
-        "<code>.vcwelcome on/off</code>\n"
-        "╚══════════════╝"
+    "vc": HELP_FULL_1.split("🛡 <b>MOD</b>")[0] if False else (
+        "🎵 <b>VC</b>\n▶️<code>.play</code> ⏭<code>.skip</code> ⏹<code>.stop</code>\n"
+        "⏸<code>.pause</code> ▶️<code>.resume</code> 📋<code>.queue</code>\n"
+        "🎤<code>.vcwelcome on/off</code>"
     ),
-    "owner": (
-        "╔══ 👑 <b>OWNER</b> ══╗\n"
-        "<code>.addsudo</code> reply/id\n"
-        "<code>.delsudo</code>\n"
-        "<code>.sudolist</code>\n"
-        "╚══════════════╝"
-    ),
+    "owner": "👑 <b>OWNER</b>\n➕<code>.addsudo</code> ➖<code>.delsudo</code> 📜<code>.sudolist</code>",
     "login": (
-        "╔══ 🔐 <b>LOGIN</b> ══╗\n"
-        "<code>.login</code> — phone OTP flow\n"
-        "<code>.addsession</code> string\n"
-        "<code>.cancellogin</code>\n"
-        "<code>.sessions</code> list\n"
-        "<code>.sessioninfo</code>\n"
-        "<code>.sessionstop</code> / <code>.sessionstart</code>\n"
-        "╚══════════════╝"
+        "🔐 <b>LOGIN</b>\n📱<code>.login</code> 🔑<code>.addsession</code>\n"
+        "📋<code>.sessions</code> ℹ️<code>.sessioninfo</code>\n"
+        "⏹<code>.sessionstop</code> ▶️<code>.sessionstart</code> ❌<code>.cancellogin</code>"
     ),
     "mod": (
-        "╔══ 🛡 <b>MOD / TAG</b> ══╗\n"
-        "<code>.ban</code> <code>.unban</code> <code>.kick</code>\n"
-        "<code>.mute</code> <code>.unmute</code>\n"
-        "<code>.promote</code> <code>.demote</code>\n"
-        "<code>.pin</code> <code>.unpin</code>\n"
-        "<code>.tagall</code> [text] — batch\n"
-        "<code>.tag</code> [text] — one by one\n"
-        "<code>.tagallstop</code> <code>.tagstop</code>\n"
-        "<code>.tagadmins</code> <code>.tagme</code>\n"
-        "╚══════════════╝"
+        "🛡 <b>MOD + TAG</b>\n"
+        "🔨<code>.ban</code> ✅<code>.unban</code> 👢<code>.kick</code>\n"
+        "🔇<code>.mute</code> 🔊<code>.unmute</code>\n"
+        "⬆️<code>.promote</code> ⬇️<code>.demote</code>\n"
+        "📌<code>.pin</code> 📍<code>.unpin</code>\n"
+        "👥<code>.tagall</code> 👤<code>.tag</code> 🛑<code>.tagstop</code>\n"
+        "🛡<code>.tagadmins</code> 🙋<code>.tagme</code>"
     ),
-    "global": (
-        "╔══ 🌐 <b>GLOBAL</b> ══╗\n"
-        "<code>.gban</code> <code>.ungban</code>\n"
-        "<code>.gbanlist</code>\n"
-        "<code>.warn</code> <code>.unwarn</code>\n"
-        "<code>.warns</code> <code>.resetwarns</code>\n"
-        "╚══════════════╝"
-    ),
-    "cast": (
-        "╔══ 📢 <b>BROADCAST</b> ══╗\n"
-        "<code>.broadcast</code>\n"
-        "<code>.gcast</code>\n"
-        "<code>.dmcast</code>\n"
-        "╚══════════════╝"
-    ),
-    "clone": (
-        "╔══ 👤 <b>CLONE</b> ══╗\n"
-        "<code>.clonemode</code>\n"
-        "<code>.clone</code> reply\n"
-        "<code>.back</code> restore\n"
-        "╚══════════════╝"
-    ),
-    "welcome": (
-        "╔══ 👋 <b>WELCOME</b> ══╗\n"
-        "<code>.welcome on/off</code>\n"
-        "<code>.setwelcome</code> text\n"
-        "<code>.vcwelcome on/off</code>\n"
-        "╚══════════════╝"
-    ),
-    "afk": (
-        "╔══ 💤 <b>AFK</b> ══╗\n"
-        "<code>.afk</code> reason\n"
-        "<code>.unafk</code> / <code>.back</code>\n"
-        "╚══════════════╝"
-    ),
-    "tools": (
-        "╔══ 🛠 <b>TOOLS</b> ══╗\n"
-        "<code>.calc</code> <code>.time</code>\n"
-        "<code>.weather</code> <code>.tr</code>\n"
-        "<code>.nuinfo</code> number\n"
-        "<code>.qr</code> <code>.paste</code>\n"
-        "╚══════════════╝"
-    ),
+    "global": "🌐 <b>GLOBAL</b>\n⛔<code>.gban</code> ✅<code>.ungban</code> ⚠️<code>.warn</code> ♻️<code>.unwarn</code>",
+    "cast": "📢 <b>CAST</b>\n📡<code>.broadcast</code> 🌍<code>.gcast</code> 💬<code>.dmcast</code>",
+    "clone": "👤 <b>CLONE</b>\n🎭<code>.clonemode</code> 📋<code>.clone</code> 🔙<code>.back</code>",
+    "welcome": "👋 <b>WELCOME</b>\n✅<code>.welcome on/off</code> ✏️<code>.setwelcome</code> 🎤<code>.vcwelcome</code>",
+    "afk": "💤 <b>AFK</b>\n🌙<code>.afk</code> ☀️<code>.unafk</code> 🔙<code>.back</code>",
+    "tools": "🛠 <b>TOOLS</b>\n🔢<code>.calc</code> 🕐<code>.time</code> 🌤<code>.weather</code> 🌐<code>.tr</code> 📞<code>.nuinfo</code>",
     "fun": (
-        "╔══ 🎨 <b>FUN / ARTS</b> ══╗\n"
-        "<code>.cat</code> <code>.rose</code>\n"
-        "<code>.hacker</code> <code>.error</code>\n"
-        "<code>.fuck</code> <code>.butterfly</code>\n"
-        "<code>.love</code> <code>.moon</code>\n"
-        "<code>.heart</code> <code>.myson</code>\n"
-        "<code>.yourmom</code> <code>.funhelp</code>\n"
-        "╚══════════════╝"
+        "🎨 <b>FUN</b>\n🐈<code>.cat</code> 🌹<code>.rose</code> 💻<code>.hacker</code>\n"
+        "⚠️<code>.error</code> 🖕<code>.fuck</code> 🦋<code>.butterfly</code>\n"
+        "❤️<code>.love</code> 🌕<code>.moon</code> 💖<code>.heart</code>\n"
+        "🐰<code>.myson</code> 🤱<code>.yourmom</code> 🎨<code>.funhelp</code>"
     ),
-    "system": (
-        "╔══ ⚙️ <b>SYSTEM</b> ══╗\n"
-        "<code>.ping</code> <code>.alive</code>\n"
-        "<code>.id</code> <code>.help</code>\n"
-        "<code>.uptime</code> <code>.menu</code>\n"
-        "╚══════════════╝"
-    ),
-    "info": (
-        "╔══ ℹ️ <b>INFO</b> ══╗\n"
-        "<code>.info</code> reply/id\n"
-        "<code>.user</code> full report\n"
-        "<code>.msginfo</code> <code>.chatinfo</code>\n"
-        "<code>.common</code>\n"
-        "╚══════════════╝"
-    ),
-    "protect": (
-        "╔══ 🛡 <b>PROTECT</b> ══╗\n"
-        "<code>.protect on/off/status</code>\n"
-        "Reply + <code>.protect</code>\n"
-        "<code>.psend</code> text\n"
-        "Reply + <code>.pfile</code>\n"
-        "╚══════════════╝"
-    ),
-    "media": (
-        "╔══ 🖼 <b>MEDIA</b> ══╗\n"
-        "<code>.kang</code> sticker\n"
-        "<code>.dp</code> / Mango DP\n"
-        "<code>.dpsave</code>\n"
-        "╚══════════════╝"
-    ),
-    "track": (
-        "╔══ 📍 <b>TRACK</b> ══╗\n"
-        "<code>.track</code>\n"
-        "<code>.trackadd</code>\n"
-        "<code>.trackdel</code>\n"
-        "╚══════════════╝"
-    ),
-    "anti": (
-        "╔══ 🚫 <b>ANTI</b> ══╗\n"
-        "<code>.antilink</code>\n"
-        "<code>.antidelete</code>\n"
-        "<code>.antiflood</code>\n"
-        "╚══════════════╝"
-    ),
-    "notes": (
-        "╔══ 📝 <b>NOTES</b> ══╗\n"
-        "<code>.save</code> <code>.get</code>\n"
-        "<code>.notes</code>\n"
-        "╚══════════════╝"
-    ),
-    "economy": (
-        "╔══ 💰 <b>ECONOMY</b> ══╗\n"
-        "<code>.bal</code> <code>.daily</code>\n"
-        "<code>.rob</code>\n"
-        "╚══════════════╝"
-    ),
-    "pm": (
-        "╔══ 💬 <b>PM GUARD</b> ══╗\n"
-        "<code>.approve</code> <code>.unapprove</code>\n"
-        "<code>.approved</code>\n"
-        "╚══════════════╝"
-    ),
-    # aliases
-    "tag": None,  # filled below
-    "arts": None,
-    "anim": None,
-    "flowers": None,
-    "anims": None,
-    "spy": None,
-    "warn": None,
-    "bro": (
-        "╔══ 🤝 <b>BRO</b> ══╗\n"
-        "<code>.bro</code> reply\n"
-        "<code>.unbro</code>\n"
-        "<code>.brolist</code>\n"
-        "╚══════════════╝"
-    ),
+    "system": "⚙️ <b>SYSTEM</b>\n🏓<code>.ping</code> 💚<code>.alive</code> 🆔<code>.id</code> ⏱<code>.uptime</code>",
+    "info": "ℹ️ <b>INFO</b>\n👤<code>.info</code> 📊<code>.user</code> 💬<code>.msginfo</code> 🏷<code>.chatinfo</code>",
+    "protect": "🛡 <b>PROTECT</b>\n🔒<code>.protect</code> ✉️<code>.psend</code> 📎<code>.pfile</code>",
+    "media": "🖼 <b>MEDIA</b>\n🎗<code>.kang</code> 🖼<code>.dp</code> 💾<code>.dpsave</code>",
+    "track": "📍 <b>TRACK</b>\n👁<code>.track</code> ➕<code>.trackadd</code> ➖<code>.trackdel</code>",
+    "anti": "🚫 <b>ANTI</b>\n🔗<code>.antilink</code> 🗑<code>.antidelete</code> 🌊<code>.antiflood</code>",
+    "notes": "📝 <b>NOTES</b>\n💾<code>.save</code> 📥<code>.get</code> 📋<code>.notes</code>",
+    "economy": "💰 <b>ECONOMY</b>\n💵<code>.bal</code> 🎁<code>.daily</code> 🔫<code>.rob</code>",
+    "pm": "💬 <b>PM</b>\n✅<code>.approve</code> ❌<code>.unapprove</code> 📜<code>.approved</code>",
+    "bro": "🤝 <b>BRO</b>\n<code>.bro</code> <code>.unbro</code> <code>.brolist</code>",
 }
-
-# aliases point to same pages
 HELP_PAGES["tag"] = HELP_PAGES["mod"]
 HELP_PAGES["arts"] = HELP_PAGES["fun"]
 HELP_PAGES["anim"] = HELP_PAGES["fun"]
-HELP_PAGES["flowers"] = HELP_PAGES["fun"]
 HELP_PAGES["anims"] = HELP_PAGES["fun"]
 HELP_PAGES["spy"] = HELP_PAGES["info"]
 HELP_PAGES["warn"] = HELP_PAGES["global"]
 HELP_PAGES["ghost"] = HELP_PAGES["track"]
-HELP_PAGES["dl"] = HELP_PAGES["media"]
-HELP_PAGES["raid"] = (
-    "╔══ ⚡ <b>RAID</b> ══╗\n"
-    "Owner modules only\n"
-    "╚══════════════╝"
-)
 
 
 async def _do_help(message: Message):
@@ -261,33 +178,28 @@ async def _do_help(message: Message):
         key = parts[1].lower()
         page = HELP_PAGES.get(key)
         if not page:
-            await _send(
-                message,
-                f"❌ Unknown page <code>{key}</code>\n"
-                f"Use <code>.help</code> for index",
-            )
+            await _send(message, f"❌ Unknown · try <code>.help</code>")
             return
-        await _send(message, page)
+        await _send(message, f"✨ {page}")
         return
-    await _send(message, HELP_INDEX)
-    print("[help] OK")
+    # sab commands ek sath (2 messages — Telegram limit)
+    await _send_multi(message, [HELP_FULL_1, HELP_FULL_2])
+    print("[help] OK full")
 
 
 @app.on_message(filters.me & filters.text & filters.regex(r"^[.!]ping(\s|$)"), group=-10)
 async def ping_me(client, message: Message):
     t0 = time.time()
     try:
-        m = await message.reply_text("💎 Pinging...")
+        m = await message.reply_text("💎✨ Pinging...")
         ms = (time.time() - t0) * 1000
-        prem = "Yes" if getattr(await client.get_me(), "is_premium", False) else "No"
+        prem = "✅" if getattr(await client.get_me(), "is_premium", False) else "❌"
         await m.edit_text(
-            f"╔══ 💎 <b>PONG</b> ══╗\n"
-            f"Latency: <code>{ms:.0f}ms</code>\n"
-            f"Uptime: <code>{_uptime()}</code>\n"
-            f"Premium: <b>{prem}</b>\n"
-            f"╚══════════╝"
+            f"🏓 <b>PONG!</b> ✨\n"
+            f"⚡ <code>{ms:.0f}ms</code>\n"
+            f"⏱ <code>{_uptime()}</code>\n"
+            f"💎 Premium: {prem}"
         )
-        print("[ping] OK")
     except Exception as e:
         print(f"[ping] {e}")
 
@@ -297,18 +209,17 @@ async def alive_me(client, message: Message):
     try:
         me = await client.get_me()
         prem = "✅" if getattr(me, "is_premium", False) else "❌"
+        uname = f"@{me.username}" if me.username else "—"
     except Exception:
-        me = None
-        prem = "?"
+        prem, uname = "?", "—"
     await _send(
         message,
-        f"╔══ 💎 <b>{NAME}</b> ══╗\n"
-        f"Status: <b>ALIVE</b>\n"
-        f"Premium: {prem}\n"
-        f"Uptime: <code>{_uptime()}</code>\n"
-        f"Owner: {OWNER_TAG}\n"
-        f"<code>.help</code> · <code>.ping</code>\n"
-        f"╚══════════════╝",
+        f"💚✨ <b>{NAME}</b> is <b>ALIVE</b> ✨\n"
+        f"👤 {uname}\n"
+        f"💎 Premium: {prem}\n"
+        f"⏱ <code>{_uptime()}</code>\n"
+        f"👑 {OWNER_TAG}\n"
+        f"📖 <code>.help</code>",
     )
 
 
@@ -322,16 +233,13 @@ async def id_me(client, message: Message):
     )
     await _send(
         message,
-        f"╔══ 🆔 <b>IDS</b> ══╗\n"
-        f"Chat: <code>{chat_id}</code>\n"
-        f"User: <code>{user_id}</code>\n"
-        f"╚══════════╝",
+        f"🆔 <b>IDs</b>\n💬 Chat: <code>{chat_id}</code>\n👤 User: <code>{user_id}</code>",
     )
 
 
 @app.on_message(filters.me & filters.text & filters.regex(r"^[.!]uptime(\s|$)"), group=-10)
 async def uptime_me(client, message: Message):
-    await _send(message, f"⏱ Uptime: <code>{_uptime()}</code>")
+    await _send(message, f"⏱✨ Uptime: <code>{_uptime()}</code>")
 
 
 @app.on_message(
@@ -344,14 +252,17 @@ async def help_me(client, message: Message):
 
 @app.on_message(filters.me & filters.text & filters.regex(r"^[.!]helpanim(\s|$)"), group=-10)
 async def helpanim_me(client, message: Message):
+    frames = ["✨", "💎", "✨💎✨", "📖 Loading..."]
     try:
-        msg = await message.reply_text("✨")
-        await asyncio.sleep(0.25)
-        await msg.edit_text("💎")
-        await asyncio.sleep(0.25)
-        await msg.edit_text(HELP_INDEX)
+        msg = await message.reply_text(frames[0])
+        for f in frames[1:]:
+            await asyncio.sleep(0.3)
+            await msg.edit_text(f)
+        await asyncio.sleep(0.3)
+        await msg.edit_text(HELP_FULL_1)
+        await _send(message, HELP_FULL_2)
     except Exception:
-        await _send(message, HELP_INDEX)
+        await _do_help(message)
 
 
 @app.on_message(
