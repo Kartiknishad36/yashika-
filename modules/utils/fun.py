@@ -1,4 +1,4 @@
-"""Fun ASCII animations — rose/cat/hacker/butterfly/love/etc."""
+"""Fun ASCII animations — rose/cat/moon/heart/etc."""
 import asyncio
 
 from pyrogram.types import Message
@@ -135,6 +135,52 @@ MYSON_ART = r"""
      / ╰    ╯ \ /    \>
 """
 
+# Moon phases → full moon art
+MOON_PHASES = [
+    "🌑  New Moon...",
+    "🌒  Waxing Crescent...",
+    "🌓  First Quarter...",
+    "🌔  Waxing Gibbous...",
+    "🌕  Full Moon rising...",
+    "✨ Stars appear...",
+]
+MOON_ART = r"""
+            .          .
+     .             *        .
+          .     .-"""""-.      *
+      *       .'  🌕   '.        .
+           . /    moon    \  .
+            |   ✨   ✨   |      *
+         *   \    night  /   .
+              '.       .'
+        .       '-...-'      *
+              *         .
+         .         *          .
+"""
+
+# Heart build frames + big heart art
+HEART_BUILD = [
+    "❤️",
+    "  ❤️\n❤️  ❤️",
+    "   ❤️\n ❤️  ❤️\n❤️    ❤️",
+    "    ❤️❤️\n  ❤️    ❤️\n ❤️      ❤️\n  ❤️    ❤️\n    ❤️❤️",
+]
+HEART_ART = r"""
+     ******       ******
+   **      **   **      **
+ **          ***          **
+**                          **
+**                          **
+ **                        **
+  **                      **
+    **                  **
+      **              **
+        **          **
+          **      **
+            **  **
+              **
+"""
+
 
 async def smart_edit(message: Message, text: str, sleep_time: float = 0.5):
     try:
@@ -206,7 +252,7 @@ async def butterfly_cmd(client, message: Message):
     await draw_art(m, BUTTERFLY_ART, footer="🦋 Fly High!")
 
 
-@app.on_message(ub_cmd("love", "heart"), group=-8)
+@app.on_message(ub_cmd("love"), group=-8)
 async def love_cmd(client, message: Message):
     frames = [
         "❤️🧡💛💚💙💜🖤🤍🤎\n❤️🧡💛💚💙💜🖤🤍🤎\n❤️🧡💛💚💙💜🖤🤍🤎",
@@ -226,6 +272,22 @@ async def love_cmd(client, message: Message):
         await smart_edit(m, frame, 0.55)
 
 
+@app.on_message(ub_cmd("moon", "chand"), group=-8)
+async def moon_cmd(client, message: Message):
+    m = await message.reply_text("🌑")
+    for frame in MOON_PHASES:
+        await smart_edit(m, frame, 0.5)
+    await draw_art(m, MOON_ART, header="🌕 NIGHT SKY", footer="✨ Good night")
+
+
+@app.on_message(ub_cmd("heart", "heartart"), group=-8)
+async def heartart_cmd(client, message: Message):
+    m = await message.reply_text("❤️")
+    for frame in HEART_BUILD:
+        await smart_edit(m, f"<code>{frame}</code>", 0.45)
+    await draw_art(m, HEART_ART, footer="❤️ FOR YOU")
+
+
 @app.on_message(ub_cmd("yourmom"), group=-8)
 async def yourmom_cmd(client, message: Message):
     m = await message.reply_text("🤱 Searching...")
@@ -236,3 +298,14 @@ async def yourmom_cmd(client, message: Message):
 async def myson_cmd(client, message: Message):
     m = await message.reply_text("🐰 Summoning...")
     await draw_art(m, MYSON_ART, footer="🐰 Me & My Son")
+
+
+@app.on_message(ub_cmd("funhelp", "arts"), group=-8)
+async def funhelp_cmd(client, message: Message):
+    await message.reply_text(
+        "🎨 <b>FUN ARTS</b>\n"
+        "<code>.cat</code> <code>.rose</code> <code>.hacker</code>\n"
+        "<code>.error</code> <code>.fuck</code> <code>.butterfly</code>\n"
+        "<code>.love</code> <code>.moon</code> <code>.heart</code>\n"
+        "<code>.yourmom</code> <code>.myson</code>"
+    )
