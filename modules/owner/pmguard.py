@@ -1,20 +1,19 @@
 """
-PM Guard — no group link / verify.
-Incoming DM → stylish warning (max 5) → report spam + block.
-Owner/sudo free. .approve / .unapprove / .approved
+PM Guard — no group link / no verify.
+Incoming DM → stylish warning (max 5) → REPORT + BLOCK.
+Owner / sudo free. Commands: .approve .unapprove .approved .pmwarns
 """
 from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
 from config import OWNER_ID, LOG_GROUP_ID
-from modules.owner.sudoers import SUDO_USERS, sudo_only, ub_cmd, is_allowed
+from modules.owner.sudoers import SUDO_USERS, sudo_only, ub_cmd
 from database.mongo import approve_pm, unapprove_pm, get_approved_pm
 
 PM_WARNS: dict[int, int] = {}
 MAX_WARNS = 5
 
-# ── stylish warning (no links) ──────────────────────────────────────────────
 WARN_TEXT = (
     "<b>╔══════════════════════╗</b>\n"
     "<b>║   ⚠️  PM SECURITY  ⚠️   ║</b>\n"
@@ -27,16 +26,16 @@ WARN_TEXT = (
     "━━━━━━━━━━━━━━━━━━━━\n\n"
     "<i>{max_warns} warning ke baad</i>\n"
     "🚫 <b>REPORT + BLOCK</b> automatic.\n\n"
-    "Agar zaroori baat hai to wait —\n"
+    "Zaroori baat hai to wait —\n"
     "owner khud reply karega."
 )
 
 BLOCK_TEXT = (
     "<b>╔══════════════════════╗</b>\n"
-    "<b>║  🚫  BLOCKED  🚫  ║</b>\n"
+    "<b>║   🚫  BLOCKED  🚫   ║</b>\n"
     "<b>╚══════════════════════╝</b>\n\n"
     "{max_warns} warnings complete.\n"
-    "Spam report + block.\n\n"
+    "Spam <b>REPORT</b> + <b>BLOCK</b>.\n\n"
     "<i>Ab message nahi bhej sakte.</i>"
 )
 
@@ -48,7 +47,6 @@ def _bar(warns: int, max_w: int = MAX_WARNS) -> str:
 
 
 async def _notify_owner(client, user, warns: int, blocked: bool = False):
-    """Log group / Saved Messages me alert."""
     name = getattr(user, "first_name", "?") or "?"
     uname = f"@{user.username}" if getattr(user, "username", None) else "—"
     uid = user.id
@@ -70,16 +68,35 @@ async def _notify_owner(client, user, warns: int, blocked: bool = False):
     targets = []
     if LOG_GROUP_ID:
         targets.append(LOG_GROUP_ID)
-    try:
-        me = await client.get_me()
-        targets.append("me")  # Saved Messages
-    except Exception:
-        pass
+    targets.append("me")
     for t in targets:
         try:
             await client.send_message(t, text)
         except Exception:
             pass
+
+
+async def _report_spam(client, user_id: int, message: Message):
+    """Best-effort spam report."""
+    try:
+        await client.report(chat_id=user_id, message_ids=message.id)
+        return
+    except Exception:
+        pass
+    try:
+        from pyrogram.raw.functions.messages import Report
+        from pyrogram.raw.types import InputReportReasonSpam
+
+        await client.invoke(
+            Report(
+                peer=await client.resolve_peer(user_id),
+                id=[message.id],
+                reason=InputReportReasonSpam(),
+                message="PM spam after 5 warnings",
+            )
+        )
+    except Exception as e:
+        print(f"[pmguard] report fail: {e}")
 
 
 @app.on_message(
@@ -92,43 +109,26 @@ async def pmguard(client, message: Message):
         return
     user_id = user.id
 
-    # owner / sudo / approved skip
     if user_id == OWNER_ID or user_id in SUDO_USERS:
         return
+
     try:
         approved = await get_approved_pm()
         if user_id in approved:
             return
     except Exception:
-        approved = []
+        pass
 
     PM_WARNS[user_id] = PM_WARNS.get(user_id, 0) + 1
     warns = PM_WARNS[user_id]
 
-    # ── 5+ → report + block ─────────────────────────────────────────────────
+    # 5th warn → report + block
     if warns >= MAX_WARNS:
-        await message.reply_text(
-            BLOCK_TEXT.format(max_warns=MAX_WARNS),
-        )
         try:
-            # Telegram spam report (best-effort)
-            await client.report(
-                chat_id=user_id,
-                message_ids=message.id,
-            )
+            await message.reply_text(BLOCK_TEXT.format(max_warns=MAX_WARNS))
         except Exception:
-            try:
-                # older API fallback
-                await client.invoke(
-                    __import__("pyrogram.raw.functions.messages", fromlist=["Report"]).Report(
-                        peer=await client.resolve_peer(user_id),
-                        id=[message.id],
-                        reason=__import__("pyrogram.raw.types", fromlist=["InputReportReasonSpam"]).InputReportReasonSpam(),
-                        message="PM spam after 5 warnings",
-                    )
-                )
-            except Exception as e:
-                print(f"[pmguard] report fail: {e}")
+            pass
+        await _report_spam(client, user_id, message)
         try:
             await client.block_user(user_id)
         except Exception as e:
@@ -137,7 +137,6 @@ async def pmguard(client, message: Message):
         PM_WARNS.pop(user_id, None)
         return
 
-    # ── warning reply ───────────────────────────────────────────────────────
     text = WARN_TEXT.format(
         warns=warns,
         max_warns=MAX_WARNS,
