@@ -5,10 +5,9 @@ Online Tracker (userbot) — detailed status + profile changes
   .trackadd <id|@user|reply>
   .trackdel <id|@user|reply>
   .tracklist
-  .trackinfo <id|reply>   — current snapshot
+  .trackinfo <id|reply>
 
-Alerts → Saved Messages + LOG_GROUP_ID
-Tracks: online/offline/recently + exact last-seen + name/username change
+Alerts → LOG_GROUP_ID only
 """
 import time
 from datetime import datetime, timezone
@@ -18,12 +17,13 @@ from pyrogram.types import Message
 from pyrogram.handlers import RawUpdateHandler
 
 from core.clients import app
+from core.notify import notify_owner
 from config import LOG_GROUP_ID
 from modules.owner.sudoers import sudo_only, ub_cmd
 from database.mongo import get_feature, set_feature, _read, _write, _lock
 
 _LAST_STATUS: dict[int, str] = {}
-_USER_CACHE: dict[int, dict] = {}  # uid -> {name, username, last_name}
+_USER_CACHE: dict[int, dict] = {}
 
 
 def _fmt_ts(ts: int | None) -> str:
@@ -36,7 +36,6 @@ def _fmt_ts(ts: int | None) -> str:
 
 
 def _status_detail(status) -> tuple[str, str]:
-    """Return (short_label, detail_line)."""
     if status is None:
         return "unknown", "status=None"
     n = type(status).__name__
@@ -82,19 +81,7 @@ async def _track_del(uid: int):
 
 
 async def _notify(client, text: str):
-    try:
-        await client.send_message("me", text)
-    except Exception:
-        try:
-            me = await client.get_me()
-            await client.send_message(me.id, text)
-        except Exception:
-            pass
-    if LOG_GROUP_ID:
-        try:
-            await client.send_message(LOG_GROUP_ID, text)
-        except Exception:
-            pass
+    await notify_owner(client, text)
 
 
 def _target(message: Message):
@@ -106,7 +93,7 @@ def _target(message: Message):
         arg = parts[1].strip()
         if arg.isdigit() or (arg.startswith("-") and arg[1:].isdigit()):
             return int(arg), arg
-        return arg, arg  # @username — resolve later
+        return arg, arg
     return None, None
 
 
@@ -161,10 +148,10 @@ async def track_toggle(client, message: Message):
     arg = parts[1].lower()
     if arg in ("on", "1", "enable"):
         await set_feature("tracker", True)
-        await message.reply_text("✅ Tracker <b>ON</b> — status + name changes.")
+        await message.reply_text("✅ Tracker <b>ON</b>")
     elif arg in ("off", "0", "disable"):
         await set_feature("tracker", False)
-        await message.reply_text("❌ Tracker <b>OFF</b>.")
+        await message.reply_text("❌ Tracker <b>OFF</b>")
     else:
         await message.reply_text("Usage: <code>.track on|off</code>")
 
@@ -175,12 +162,11 @@ async def track_add_cmd(client, message: Message):
     raw_t, _ = _target(message)
     uid, name = await _resolve_uid(client, raw_t)
     if not uid:
-        await message.reply_text("Reply / <code>.trackadd id</code> / <code>.trackadd @user</code>")
+        await message.reply_text("Reply / <code>.trackadd id</code>")
         return
     await _track_add(uid)
     info = await _cache_user(client, uid)
     uname = f"@{info.get('username')}" if info.get("username") else "—"
-    # seed status
     try:
         u = await client.get_users(uid)
         st, detail = _status_detail(getattr(u, "status", None))
@@ -188,15 +174,9 @@ async def track_add_cmd(client, message: Message):
     except Exception:
         st, detail = "?", ""
     await message.reply_text(
-        f"✅ Tracking <b>{name}</b>\n"
-        f"ID: <code>{uid}</code>\n"
-        f"User: {uname}\n"
-        f"Now: <b>{st}</b> {detail}"
+        f"✅ Tracking <b>{name}</b>\nID: <code>{uid}</code>\nUser: {uname}\nNow: <b>{st}</b>"
     )
-    await _notify(
-        client,
-        f"👁 <b>TRACK ADD</b>\n<code>{uid}</code> {name} {uname}\nstatus={st}",
-    )
+    await _notify(client, f"👁 <b>TRACK ADD</b>\n<code>{uid}</code> {name} {uname}")
 
 
 @app.on_message(ub_cmd("trackdel"))
@@ -210,7 +190,7 @@ async def track_del_cmd(client, message: Message):
     await _track_del(uid)
     _LAST_STATUS.pop(uid, None)
     _USER_CACHE.pop(uid, None)
-    await message.reply_text(f"✅ Removed <code>{uid}</code> ({name})")
+    await message.reply_text(f"✅ Removed <code>{uid}</code>")
 
 
 @app.on_message(ub_cmd("tracklist"))
@@ -228,9 +208,7 @@ async def track_list_cmd(client, message: Message):
         un = f"@{c['username']}" if c.get("username") else ""
         lines.append(f"• <code>{uid}</code> {nm} {un} — <b>{st}</b>")
     on = await get_feature("tracker", False)
-    await message.reply_text(
-        f"👁 <b>Tracking</b> [{'ON' if on else 'OFF'}]\n\n" + "\n".join(lines)
-    )
+    await message.reply_text(f"👁 <b>Tracking</b> [{'ON' if on else 'OFF'}]\n\n" + "\n".join(lines))
 
 
 @app.on_message(ub_cmd("trackinfo"))
@@ -252,8 +230,7 @@ async def track_info_cmd(client, message: Message):
             f"User: @{u.username or '—'}\n"
             f"ID: <code>{u.id}</code>\n"
             f"Status: <b>{st}</b>\n"
-            f"Detail: <code>{detail}</code>\n"
-            f"DC: <code>{getattr(u, 'dc_id', '—')}</code>"
+            f"Detail: <code>{detail}</code>"
         )
     except Exception as e:
         await message.reply_text(f"❌ <code>{e}</code>")
@@ -268,7 +245,6 @@ async def _on_raw(client, update, users, chats):
             return
         tracked_set = set(int(x) for x in tracked)
 
-        # ── status change ───────────────────────────────────────────────────
         if isinstance(update, raw.types.UpdateUserStatus):
             uid = int(update.user_id)
             if uid not in tracked_set:
@@ -278,7 +254,6 @@ async def _on_raw(client, update, users, chats):
             _LAST_STATUS[uid] = new_st
             if old == new_st:
                 return
-
             name = str(uid)
             uname = ""
             if uid in users and users[uid]:
@@ -288,21 +263,15 @@ async def _on_raw(client, update, users, chats):
             elif uid in _USER_CACHE:
                 name = _USER_CACHE[uid].get("name") or name
                 uname = _USER_CACHE[uid].get("username") or ""
-
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
             await _notify(
                 client,
-                f"👁 <b>STATUS CHANGE</b>\n"
-                f"Time: <code>{ts}</code>\n"
-                f"User: <b>{name}</b>"
-                + (f" (@{uname})" if uname else "")
-                + f"\nID: <code>{uid}</code>\n"
-                f"{old or '—'} → <b>{new_st}</b>\n"
-                f"<code>{detail}</code>",
+                f"👁 <b>STATUS CHANGE</b>\nTime: <code>{ts}</code>\n"
+                f"User: <b>{name}</b>" + (f" (@{uname})" if uname else "")
+                + f"\nID: <code>{uid}</code>\n{old or '—'} → <b>{new_st}</b>",
             )
             return
 
-        # ── name / username change ──────────────────────────────────────────
         if isinstance(update, raw.types.UpdateUser):
             u = getattr(update, "user", None)
             if not u:
@@ -318,26 +287,16 @@ async def _on_raw(client, update, users, chats):
             if old.get("name") and old["name"] != new_name:
                 changes.append(f"Name: <code>{old['name']}</code> → <b>{new_name}</b>")
             if old.get("last_name", "") != new_last and (old.get("last_name") or new_last):
-                changes.append(
-                    f"Last: <code>{old.get('last_name') or '—'}</code> → <b>{new_last or '—'}</b>"
-                )
+                changes.append(f"Last: <code>{old.get('last_name') or '—'}</code> → <b>{new_last or '—'}</b>")
             if old.get("username", "") != new_user and (old.get("username") or new_user):
-                changes.append(
-                    f"User: @{old.get('username') or '—'} → <b>@{new_user or '—'}</b>"
-                )
-            _USER_CACHE[uid] = {
-                "name": new_name,
-                "last_name": new_last,
-                "username": new_user,
-            }
+                changes.append(f"User: @{old.get('username') or '—'} → <b>@{new_user or '—'}</b>")
+            _USER_CACHE[uid] = {"name": new_name, "last_name": new_last, "username": new_user}
             if not changes:
                 return
             ts = time.strftime("%Y-%m-%d %H:%M:%S")
             await _notify(
                 client,
-                f"👁 <b>PROFILE CHANGE</b>\n"
-                f"Time: <code>{ts}</code>\n"
-                f"ID: <code>{uid}</code>\n"
+                f"👁 <b>PROFILE CHANGE</b>\nTime: <code>{ts}</code>\nID: <code>{uid}</code>\n"
                 + "\n".join(changes),
             )
     except Exception as e:
