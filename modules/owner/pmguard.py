@@ -1,12 +1,12 @@
 """
-PM Guard — no group link / no verify.
-Incoming DM → stylish warning (max 5) → REPORT + BLOCK.
-Owner / sudo free. Commands: .approve .unapprove .approved .pmwarns
+PM Guard — 5 warns → REPORT + BLOCK
+.approve .unapprove .approved .pmwarns
 """
 from pyrogram import filters
 from pyrogram.types import Message
 
 from core.clients import app
+from core.notify import notify_owner
 from config import OWNER_ID, LOG_GROUP_ID
 from modules.owner.sudoers import SUDO_USERS, sudo_only, ub_cmd
 from database.mongo import approve_pm, unapprove_pm, get_approved_pm
@@ -15,28 +15,17 @@ PM_WARNS: dict[int, int] = {}
 MAX_WARNS = 5
 
 WARN_TEXT = (
-    "<b>╔══════════════════════╗</b>\n"
-    "<b>║   ⚠️  PM SECURITY  ⚠️   ║</b>\n"
-    "<b>╚══════════════════════╝</b>\n\n"
-    "<b>Bina permission DM mat karo.</b>\n"
-    "Owner busy hai — spam mat bhejo.\n\n"
-    "⚠️ Warning: <b>{warns}/{max_warns}</b>\n"
-    "━━━━━━━━━━━━━━━━━━━━\n"
-    "{bar}\n"
-    "━━━━━━━━━━━━━━━━━━━━\n\n"
-    "<i>{max_warns} warning ke baad</i>\n"
-    "🚫 <b>REPORT + BLOCK</b> automatic.\n\n"
-    "Zaroori baat hai to wait —\n"
-    "owner khud reply karega."
+    "<b>⚠️ PM SECURITY</b>\n\n"
+    "Bina permission DM mat karo.\n\n"
+    "Warning: <b>{warns}/{max_warns}</b>\n"
+    "{bar}\n\n"
+    "{max_warns} warning ke baad <b>REPORT + BLOCK</b>."
 )
 
 BLOCK_TEXT = (
-    "<b>╔══════════════════════╗</b>\n"
-    "<b>║   🚫  BLOCKED  🚫   ║</b>\n"
-    "<b>╚══════════════════════╝</b>\n\n"
+    "<b>🚫 BLOCKED</b>\n\n"
     "{max_warns} warnings complete.\n"
-    "Spam <b>REPORT</b> + <b>BLOCK</b>.\n\n"
-    "<i>Ab message nahi bhej sakte.</i>"
+    "Spam REPORT + BLOCK."
 )
 
 
@@ -54,9 +43,7 @@ async def _notify_owner(client, user, warns: int, blocked: bool = False):
         text = (
             f"<b>PM GUARD — BLOCKED</b>\n"
             f"User: <b>{name}</b> ({uname})\n"
-            f"ID: <code>{uid}</code>\n"
-            f"Warns: {MAX_WARNS}/{MAX_WARNS}\n"
-            f"Action: report + block"
+            f"ID: <code>{uid}</code>"
         )
     else:
         text = (
@@ -65,19 +52,10 @@ async def _notify_owner(client, user, warns: int, blocked: bool = False):
             f"ID: <code>{uid}</code>\n"
             f"Warns: {warns}/{MAX_WARNS}"
         )
-    targets = []
-    if LOG_GROUP_ID:
-        targets.append(LOG_GROUP_ID)
-    targets.append("me")
-    for t in targets:
-        try:
-            await client.send_message(t, text)
-        except Exception:
-            pass
+    await notify_owner(client, text)
 
 
 async def _report_spam(client, user_id: int, message: Message):
-    """Best-effort spam report."""
     try:
         await client.report(chat_id=user_id, message_ids=message.id)
         return
@@ -122,7 +100,6 @@ async def pmguard(client, message: Message):
     PM_WARNS[user_id] = PM_WARNS.get(user_id, 0) + 1
     warns = PM_WARNS[user_id]
 
-    # 5th warn → report + block
     if warns >= MAX_WARNS:
         try:
             await message.reply_text(BLOCK_TEXT.format(max_warns=MAX_WARNS))
@@ -137,11 +114,7 @@ async def pmguard(client, message: Message):
         PM_WARNS.pop(user_id, None)
         return
 
-    text = WARN_TEXT.format(
-        warns=warns,
-        max_warns=MAX_WARNS,
-        bar=_bar(warns),
-    )
+    text = WARN_TEXT.format(warns=warns, max_warns=MAX_WARNS, bar=_bar(warns))
     try:
         await message.reply_text(text)
     except Exception as e:
@@ -206,7 +179,5 @@ async def pmwarns_cmd(client, message: Message):
     if not PM_WARNS:
         await message.reply_text("Koi active PM warn nahi.")
         return
-    lines = "\n".join(
-        f"• <code>{uid}</code> — {w}/{MAX_WARNS}" for uid, w in PM_WARNS.items()
-    )
+    lines = "\n".join(f"• <code>{uid}</code> — {w}/{MAX_WARNS}" for uid, w in PM_WARNS.items())
     await message.reply_text(f"⚠️ <b>PM Warns</b>\n\n{lines}")
