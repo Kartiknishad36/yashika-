@@ -84,13 +84,19 @@ MODULES = [
 ]
 
 loaded = 0
+_failed = []
 for m in MODULES:
     try:
         importlib.import_module(m)
         loaded += 1
     except Exception as e:
+        _failed.append(m)
         print(f"[Userbot] WARN load {m}: {type(e).__name__}: {e}")
 print(f"[Userbot] Modules loaded: {loaded}/{len(MODULES)}")
+if _failed:
+    print(f"[Userbot] FAILED ({len(_failed)}): {', '.join(_failed)}")
+else:
+    print("[Userbot] All modules loaded OK")
 
 _TRACKED_AT: dict = {}
 _TRACK_INTERVAL = 3600
