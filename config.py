@@ -41,6 +41,9 @@ COOKIES_PATH = _str("COOKIES_PATH", "cookies.txt")
 BASE_URL = _str("BASE_URL", "")
 API_KEY = _str("API_KEY", "")
 
+# Optional number lookup (apilayer / numverify style)
+NUMLOOKUP_API_KEY = _str("NUMLOOKUP_API_KEY", "")
+
 # Branding
 BOT_NAME = _str("BOT_NAME", "Yashika")
 BOT_USERNAME = _str("BOT_USERNAME", "").lstrip("@")
