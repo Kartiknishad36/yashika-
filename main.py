@@ -1,16 +1,27 @@
+"""
+Yashika — Bot + optional Userbot (Railway ready)
+
+Required: API_ID, API_HASH, BOT_TOKEN, OWNER_ID
+Optional: STRING_SESSION, MONGO_URI, LOG_GROUP_ID
+"""
 import asyncio
 import importlib
-import time
 from datetime import datetime, timezone
 
-from core.clients import app
-from core.call_manager import ensure_started
-from core.autodelete import register_trigger_autodelete
-from database.mongo import add_chat
-from modules.owner.sudoers import load_sudoers, SUDO_USERS, set_me_id
-from config import LOG_GROUP_ID, BOT_NAME, OWNER_ID
+from config import (
+    API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, OWNER_ID,
+    LOG_GROUP_ID, BOT_NAME, MONGO_URI,
+)
+from core.clients import bot, app
+from core.autodelete import register_trigger_autodelete, register_bot_autodelete
+from core.notify import notify_owner
 
-MODULES = [
+BOT_MODULES = [
+    "modules.bot.start",
+    "modules.bot.login_bot",
+]
+
+UB_MODULES = [
     "modules.owner.sudoers",
     "modules.owner.login",
     "modules.owner.session_manager",
@@ -20,11 +31,9 @@ MODULES = [
     "modules.owner.raid_spam",
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
-
     "modules.vc.play",
     "modules.vc.controls",
     "modules.utils.vc_welcome",
-
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
     "modules.global_mod.gdel",
@@ -45,9 +54,7 @@ MODULES = [
     "modules.global_mod.zombies",
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
-
     "modules.economy.basic",
-
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.intel",
@@ -77,111 +84,111 @@ MODULES = [
     "modules.utils.dark_spy",
     "modules.utils.spy_pack",
     "modules.utils.voice",
-
     "modules.media.kang",
     "modules.media.download",
     "modules.media.social",
 ]
 
-loaded = 0
-_failed = []
-for m in MODULES:
-    try:
-        importlib.import_module(m)
-        loaded += 1
-    except Exception as e:
-        _failed.append(m)
-        print(f"[Userbot] WARN load {m}: {type(e).__name__}: {e}")
-print(f"[Userbot] Modules loaded: {loaded}/{len(MODULES)}")
-if _failed:
-    print(f"[Userbot] FAILED ({len(_failed)}): {', '.join(_failed)}")
-else:
-    print("[Userbot] All modules loaded OK")
 
-_TRACKED_AT: dict = {}
-_TRACK_INTERVAL = 3600
-
-
-async def track_chats():
-    from pyrogram import filters
-
-    @app.on_message(filters.group | filters.private, group=50)
-    async def _track(client, message):
+def _load(mods, label):
+    ok = 0
+    failed = []
+    for m in mods:
         try:
-            chat = message.chat
-            if not chat:
-                return
-            now = time.time()
-            if now - _TRACKED_AT.get(chat.id, 0) < _TRACK_INTERVAL:
-                return
-            _TRACKED_AT[chat.id] = now
-            title = getattr(chat, "title", None) or getattr(chat, "first_name", None) or ""
-            await add_chat(chat.id, title)
-        except Exception:
-            pass
-
-
-async def _notify_log(text: str):
-    if not LOG_GROUP_ID:
-        return
-    try:
-        await app.send_message(LOG_GROUP_ID, text)
-    except Exception as e:
-        print(f"[Userbot] LOG fail: {e}")
+            importlib.import_module(m)
+            ok += 1
+        except Exception as e:
+            failed.append(m)
+            print(f"[{label}] WARN {m}: {type(e).__name__}: {e}")
+    print(f"[{label}] loaded {ok}/{len(mods)}")
+    if failed:
+        print(f"[{label}] FAILED: {', '.join(failed)}")
+    return ok
 
 
 async def main():
-    await load_sudoers()
-    await track_chats()
-    register_trigger_autodelete(app, enabled=True)
+    if not API_ID or not API_HASH:
+        raise SystemExit("API_ID / API_HASH required")
+    if not BOT_TOKEN and not STRING_SESSION:
+        raise SystemExit("Set BOT_TOKEN and/or STRING_SESSION")
 
     try:
+        importlib.import_module("modules.owner.sudoers")
+        importlib.import_module("modules.owner.session_manager")
+    except Exception as e:
+        print(f"[boot] core: {e}")
+
+    if bot is not None:
+        _load(BOT_MODULES, "bot")
+        register_bot_autodelete(bot)
+    else:
+        print("[boot] BOT_TOKEN missing — bot off")
+
+    if app is not None:
+        _load(UB_MODULES, "userbot")
+        register_trigger_autodelete(app, enabled=True)
+        try:
+            from modules.owner.sudoers import load_sudoers
+            await load_sudoers()
+        except Exception as e:
+            print(f"[boot] sudoers: {e}")
+    else:
+        print("[boot] STRING_SESSION missing — userbot off")
+
+    if MONGO_URI:
+        try:
+            from database.mongo_async import get_db
+            await get_db()
+        except Exception as e:
+            print(f"[boot] mongo: {e}")
+
+    if bot is not None:
+        await bot.start()
+        bme = await bot.get_me()
+        print(f"[bot] @{bme.username} id={bme.id}")
+        try:
+            from modules.owner.sudoers import SUDO_USERS
+            if OWNER_ID:
+                SUDO_USERS.add(OWNER_ID)
+        except Exception:
+            pass
+
+    if app is not None:
         await app.start()
-        me = await app.get_me()
-        set_me_id(me.id)
-        if OWNER_ID:
-            SUDO_USERS.add(OWNER_ID)
-        SUDO_USERS.add(me.id)
-        print(f"[Userbot] Started as {me.first_name} (@{me.username or me.id})")
-        print(f"[Userbot] ME_ID={me.id} OWNER={OWNER_ID}")
-    except Exception as e:
-        print(f"[Userbot] FATAL: {e}")
-        raise
+        ume = await app.get_me()
+        print(f"[userbot] {ume.first_name} id={ume.id}")
+        try:
+            from modules.owner.sudoers import set_me_id, SUDO_USERS
+            set_me_id(ume.id)
+            if OWNER_ID:
+                SUDO_USERS.add(OWNER_ID)
+            SUDO_USERS.add(ume.id)
+        except Exception as e:
+            print(f"[userbot] me: {e}")
+        try:
+            from modules.owner.session_manager import boot_saved_sessions
+            await boot_saved_sessions()
+        except Exception as e:
+            print(f"[userbot] sessions: {e}")
+        try:
+            from core.call_manager import ensure_started
+            await ensure_started(app)
+            print("[userbot] PyTgCalls ready")
+        except Exception as e:
+            print(f"[userbot] PyTgCalls: {e}")
 
-    try:
-        from modules.owner.session_manager import boot_saved_sessions
-
-        await boot_saved_sessions()
-    except Exception as e:
-        print(f"[Userbot] extra sessions: {e}")
-
-    try:
-        from modules.utils.autoreply import boot_style_scan
-
-        asyncio.create_task(boot_style_scan())
-    except Exception as e:
-        print(f"[Userbot] style scan: {e}")
-
-    await asyncio.sleep(1)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    uname = f"@{me.username}" if me.username else "—"
-    await _notify_log(
-        f"<b>USERBOT STARTED</b>\n"
-        f"Name: <b>{me.first_name}</b>\n"
-        f"User: {uname}\n"
-        f"ID: <code>{me.id}</code>\n"
-        f"Time: <code>{now}</code>"
-    )
+    client = bot or app
+    if client:
+        await notify_owner(
+            client,
+            f"<b>{BOT_NAME} STARTED</b>\n"
+            f"Mode: {'BOT' if bot else ''}{' + UB' if app else ''}\n"
+            f"Time: <code>{now}</code>\n"
+            f"Owner: <code>{OWNER_ID}</code>",
+        )
 
-    await asyncio.sleep(2)
-    try:
-        await ensure_started(app)
-        print("[Userbot] PyTgCalls ready")
-    except Exception as e:
-        print(f"[Userbot] PyTgCalls: {e}")
-
-    print("[Userbot] READY")
-    await _notify_log(f"<b>{BOT_NAME or 'Yashika'} READY</b>")
+    print("[READY] Railway worker running")
     await asyncio.Event().wait()
 
 
