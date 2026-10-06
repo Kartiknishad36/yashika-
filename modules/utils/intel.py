@@ -196,7 +196,9 @@ async def common_cmd(client, message: Message):
         async for c in client.get_common_chats(uid):
             n += 1
             title = c.title or c.first_name or str(c.id)
-            lines.append(f"• <b>{title}</b>\n  <code>{c.id}</code> · {_link(c)")
+            lines.append(
+                f"• <b>{title}</b>\n  <code>{c.id}</code> · {_link(c)}"
+            )
             if len(lines) >= 30:
                 break
     except Exception as e:
