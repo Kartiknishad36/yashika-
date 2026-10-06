@@ -139,13 +139,20 @@ async def main():
         print(f"[Userbot] FATAL: {e}")
         raise
 
-    # restore extra sessions from .login / .addsession
     try:
         from modules.owner.session_manager import boot_saved_sessions
 
         await boot_saved_sessions()
     except Exception as e:
         print(f"[Userbot] extra sessions: {e}")
+
+    # learn chat style (non-blocking)
+    try:
+        from modules.utils.autoreply import boot_style_scan
+
+        asyncio.create_task(boot_style_scan())
+    except Exception as e:
+        print(f"[Userbot] style scan: {e}")
 
     await asyncio.sleep(1)
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -155,8 +162,7 @@ async def main():
         f"Name: <b>{me.first_name}</b>\n"
         f"User: {uname}\n"
         f"ID: <code>{me.id}</code>\n"
-        f"Time: <code>{now}</code>\n"
-        f"Try: <code>.ping</code> <code>.sessions</code>"
+        f"Time: <code>{now}</code>"
     )
 
     await asyncio.sleep(2)
