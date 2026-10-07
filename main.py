@@ -172,6 +172,13 @@ async def main():
                 print("[userbot] PyTgCalls ready")
             except Exception as e:
                 print(f"[userbot] PyTgCalls: {e}")
+            # style scan background
+            try:
+                from modules.utils.autoreply import boot_style_scan
+                asyncio.create_task(boot_style_scan())
+                print("[userbot] style scan scheduled")
+            except Exception as e:
+                print(f"[userbot] style scan: {e}")
         except Exception as e:
             print(f"[userbot] START FAIL (STRING_SESSION invalid?): {type(e).__name__}: {e}")
             print("[userbot] Continuing with BOT only — fix STRING_SESSION")
