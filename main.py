@@ -1,16 +1,11 @@
-"""
-Yashika — Bot + optional Userbot (Railway ready)
-
-Required: API_ID, API_HASH, BOT_TOKEN, OWNER_ID
-Optional: STRING_SESSION, MONGO_URI, LOG_GROUP_ID
-"""
+"""Yashika — Bot + optional Userbot (Railway ready)"""
 import asyncio
 import importlib
 from datetime import datetime, timezone
 
 from config import (
     API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, OWNER_ID,
-    LOG_GROUP_ID, BOT_NAME, MONGO_URI,
+    BOT_NAME, MONGO_URI,
 )
 from core.clients import bot, app
 from core.autodelete import register_trigger_autodelete, register_bot_autodelete
@@ -154,39 +149,46 @@ async def main():
             pass
 
     if app is not None:
-        await app.start()
-        ume = await app.get_me()
-        print(f"[userbot] {ume.first_name} id={ume.id}")
         try:
-            from modules.owner.sudoers import set_me_id, SUDO_USERS
-            set_me_id(ume.id)
-            if OWNER_ID:
-                SUDO_USERS.add(OWNER_ID)
-            SUDO_USERS.add(ume.id)
+            await app.start()
+            ume = await app.get_me()
+            print(f"[userbot] {ume.first_name} id={ume.id}")
+            try:
+                from modules.owner.sudoers import set_me_id, SUDO_USERS
+                set_me_id(ume.id)
+                if OWNER_ID:
+                    SUDO_USERS.add(OWNER_ID)
+                SUDO_USERS.add(ume.id)
+            except Exception as e:
+                print(f"[userbot] me: {e}")
+            try:
+                from modules.owner.session_manager import boot_saved_sessions
+                await boot_saved_sessions()
+            except Exception as e:
+                print(f"[userbot] sessions: {e}")
+            try:
+                from core.call_manager import ensure_started
+                await ensure_started(app)
+                print("[userbot] PyTgCalls ready")
+            except Exception as e:
+                print(f"[userbot] PyTgCalls: {e}")
         except Exception as e:
-            print(f"[userbot] me: {e}")
-        try:
-            from modules.owner.session_manager import boot_saved_sessions
-            await boot_saved_sessions()
-        except Exception as e:
-            print(f"[userbot] sessions: {e}")
-        try:
-            from core.call_manager import ensure_started
-            await ensure_started(app)
-            print("[userbot] PyTgCalls ready")
-        except Exception as e:
-            print(f"[userbot] PyTgCalls: {e}")
+            print(f"[userbot] START FAIL (STRING_SESSION invalid?): {type(e).__name__}: {e}")
+            print("[userbot] Continuing with BOT only — fix STRING_SESSION")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     client = bot or app
     if client:
-        await notify_owner(
-            client,
-            f"<b>{BOT_NAME} STARTED</b>\n"
-            f"Mode: {'BOT' if bot else ''}{' + UB' if app else ''}\n"
-            f"Time: <code>{now}</code>\n"
-            f"Owner: <code>{OWNER_ID}</code>",
-        )
+        try:
+            await notify_owner(
+                client,
+                f"<b>{BOT_NAME} STARTED</b>\n"
+                f"Mode: {'BOT' if bot else ''}{' + UB' if app else ''}\n"
+                f"Time: <code>{now}</code>\n"
+                f"Owner: <code>{OWNER_ID}</code>",
+            )
+        except Exception:
+            pass
 
     print("[READY] Railway worker running")
     await asyncio.Event().wait()
