@@ -1,4 +1,4 @@
-"""Fun ASCII animations — rose/cat/moon/heart/etc."""
+"""Fun ASCII animations — rose/cat/moon/heart + text banners"""
 import asyncio
 
 from pyrogram.types import Message
@@ -179,6 +179,84 @@ HEART_ART = r"""
               **
 """
 
+OK_ART = r"""
+  ___  _  __
+ / _ \| |/ /
+| |_| |   <
+ \___/|_|\_\
+"""
+
+VIP_ART = r"""
+ __     _____ _____
+ \ \   / /_ _|  _ \
+  \ \ / / | || |_) |
+   \ V /  | ||  __/
+    \_/  |___|_|
+"""
+
+BOSS_ART = r"""
+ ____   ___  ____ ____
+| __ ) / _ \/ ___/ ___|
+|  _ \| | | \___ \___ \
+| |_) | |_| |___) |__) |
+|____/ \___/|____/____/
+"""
+
+PRO_ART = r"""
+ ____  ____   ___
+|  _ \|  _ \ / _ \
+| |_) | |_) | | | |
+|  __/|  _ <| |_| |
+|_|   |_| \_\___/
+"""
+
+KING_ART = r"""
+ _  _____ _   _  ____
+| |/ /_ _| \ | |/ ___|
+| ' / | ||  \| | |  _
+| . \ | || |\  | |_| |
+|_|\_\___|_| \_|\____|
+"""
+
+YASHIKA_ART = r"""
+__   __        _     _ _
+\ \ / /_ _ ___| |__ (_) | ____ _
+ \ V / _` / __| '_ \| | |/ / _` |
+  | | (_| \__ \ | | | |   < (_| |
+  |_|\__,_|___/_| |_|_|_|\_\__,_|
+"""
+
+WIN_ART = r"""
+\ \      / (_)_ __
+ \ \ /\ / /| | '_ \
+  \ V  V / | | | | |
+   \_/\_/  |_|_| |_|
+"""
+
+GG_ART = r"""
+  ____  ____
+ / ___/ ___|
+| |  _| |  _
+| |_| | |_| |
+ \____|\____|
+"""
+
+HI_ART = r"""
+ _   _ ___
+| | | |_ _|
+| |_| || |
+|  _  || |
+|_| |_|___|
+"""
+
+BYE_ART = r"""
+ ____  __   __ _____
+| __ )/ / /\ \ | ____|
+|  _ \\ \/  \/ /|  _|
+| |_) \  /\  / | |___
+|____/ \/  \/  |_____|
+"""
+
 
 async def smart_edit(message: Message, text: str, sleep_time: float = 0.5):
     try:
@@ -298,6 +376,66 @@ async def myson_cmd(client, message: Message):
     await draw_art(m, MYSON_ART, footer="🐰 Me & My Son")
 
 
+@app.on_message(ub_cmd("ok"), group=-8)
+async def ok_cmd(client, message: Message):
+    m = await message.reply_text("✅")
+    await draw_art(m, OK_ART, footer="✅ OK")
+
+
+@app.on_message(ub_cmd("vip"), group=-8)
+async def vip_cmd(client, message: Message):
+    m = await message.reply_text("💎")
+    await draw_art(m, VIP_ART, footer="💎 VIP")
+
+
+@app.on_message(ub_cmd("boss"), group=-8)
+async def boss_cmd(client, message: Message):
+    m = await message.reply_text("👑")
+    await draw_art(m, BOSS_ART, footer="👑 BOSS")
+
+
+@app.on_message(ub_cmd("pro"), group=-8)
+async def pro_cmd(client, message: Message):
+    m = await message.reply_text("⚡")
+    await draw_art(m, PRO_ART, footer="⚡ PRO")
+
+
+@app.on_message(ub_cmd("king"), group=-8)
+async def king_cmd(client, message: Message):
+    m = await message.reply_text("👑")
+    await draw_art(m, KING_ART, footer="👑 KING")
+
+
+@app.on_message(ub_cmd("yashika"), group=-8)
+async def yashika_cmd(client, message: Message):
+    m = await message.reply_text("✨")
+    await draw_art(m, YASHIKA_ART, footer="✨ YASHIKA")
+
+
+@app.on_message(ub_cmd("win"), group=-8)
+async def win_cmd(client, message: Message):
+    m = await message.reply_text("🏆")
+    await draw_art(m, WIN_ART, footer="🏆 WIN")
+
+
+@app.on_message(ub_cmd("gg"), group=-8)
+async def gg_cmd(client, message: Message):
+    m = await message.reply_text("🔥")
+    await draw_art(m, GG_ART, footer="🔥 GG")
+
+
+@app.on_message(ub_cmd("hi"), group=-8)
+async def hi_cmd(client, message: Message):
+    m = await message.reply_text("👋")
+    await draw_art(m, HI_ART, footer="👋 HI")
+
+
+@app.on_message(ub_cmd("bye"), group=-8)
+async def bye_cmd(client, message: Message):
+    m = await message.reply_text("👋")
+    await draw_art(m, BYE_ART, footer="👋 BYE")
+
+
 @app.on_message(ub_cmd("funhelp", "arts"), group=-8)
 async def funhelp_cmd(client, message: Message):
     await message.reply_text(
@@ -305,5 +443,9 @@ async def funhelp_cmd(client, message: Message):
         "<code>.cat</code> <code>.rose</code> <code>.hacker</code>\n"
         "<code>.error</code> <code>.fuck</code> <code>.butterfly</code>\n"
         "<code>.love</code> <code>.moon</code> <code>.heart</code>\n"
-        "<code>.yourmom</code> <code>.myson</code>"
+        "<code>.yourmom</code> <code>.myson</code>\n\n"
+        "📜 <b>TEXT</b>\n"
+        "<code>.ok</code> <code>.vip</code> <code>.boss</code> <code>.pro</code>\n"
+        "<code>.king</code> <code>.yashika</code> <code>.win</code>\n"
+        "<code>.gg</code> <code>.hi</code> <code>.bye</code>"
     )
