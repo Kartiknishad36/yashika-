@@ -1,18 +1,12 @@
 """
-.nuinfo / .numinfo / .number
+.nuinfo / .numinfo / .number — expanded phone intel
 
-  .nuinfo +919876543210
-  reply to msg with number + .nuinfo
-
-Local: phonenumbers (valid, region, carrier, timezone, formats)
-Optional: NUMLOOKUP_API_KEY in env → apilayer validate
-
-NOTE (legal):
-  Aadhaar, owner name, home address, linked SIMs — Telegram/public API
-  se nahi milte. Government/telecom KYC data unauthorized access illegal.
+Legal: carrier, region, formats, timezone only.
+No Aadhaar / KYC / home address (not available legally).
 """
 import re
 import os
+from datetime import datetime, timezone
 
 import aiohttp
 from pyrogram.types import Message
@@ -28,9 +22,32 @@ except ImportError:
 try:
     import phonenumbers
     from phonenumbers import geocoder, carrier, timezone as pn_tz
-    from phonenumbers.phonenumberutil import number_type, PhoneNumberType
+    from phonenumbers.phonenumberutil import number_type, PhoneNumberType, region_code_for_number
 except ImportError:
     phonenumbers = None
+
+# Common country calling codes
+CC_HINT = {
+    1: "US/Canada",
+    7: "Russia/Kazakhstan",
+    44: "United Kingdom",
+    91: "India",
+    92: "Pakistan",
+    880: "Bangladesh",
+    971: "UAE",
+    966: "Saudi Arabia",
+    61: "Australia",
+    49: "Germany",
+    33: "France",
+    81: "Japan",
+    86: "China",
+    62: "Indonesia",
+    63: "Philippines",
+    60: "Malaysia",
+    65: "Singapore",
+    94: "Sri Lanka",
+    977: "Nepal",
+}
 
 
 def _extract_number(text: str) -> str:
@@ -78,18 +95,21 @@ async def nuinfo_cmd(client, message: Message):
     num = _extract_number(raw)
     if not num:
         await message.reply_text(
-            "╔══ 📞 <b>NUINFO</b> ══╗\n"
+            "╔══ 📞 <b>NUINFO PREMIUM</b> ══╗\n\n"
             "Usage:\n"
-            "<code>.nuinfo +919876543210</code>\n"
-            "Reply to number + <code>.nuinfo</code>\n\n"
-            "<i>Optional env: NUMLOOKUP_API_KEY</i>\n"
-            "╚══════════════╝"
+            "• <code>.nuinfo +919876543210</code>\n"
+            "• Reply to number/contact + <code>.nuinfo</code>\n\n"
+            "Gets: valid · region · carrier · timezone · formats\n"
+            "Optional: <code>NUMLOOKUP_API_KEY</code> env\n\n"
+            "❌ Aadhaar / address / KYC — not available\n"
+            "╚════════════════════════╝"
         )
         return
 
     lines = [
-        "╔══ 📞 <b>NUMBER INFO</b> ══╗",
-        f"Input: <code>{num}</code>",
+        "╔══ 📞 <b>NUMBER FULL INFO</b> ══╗",
+        f"Input raw: <code>{num}</code>",
+        f"⏱ {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}",
         "",
     ]
 
@@ -110,40 +130,60 @@ async def nuinfo_cmd(client, message: Message):
             national = phonenumbers.format_number(
                 pn, phonenumbers.PhoneNumberFormat.NATIONAL
             )
+            rfc = phonenumbers.format_number(
+                pn, phonenumbers.PhoneNumberFormat.RFC3966
+            )
             region = geocoder.description_for_number(pn, "en") or "—"
             region_hi = geocoder.description_for_number(pn, "hi") or ""
+            region_local = geocoder.description_for_number(pn, "en") or "—"
             car = carrier.name_for_number(pn, "en") or "—"
+            car_hi = carrier.name_for_number(pn, "hi") or ""
             tzs = list(pn_tz.time_zones_for_number(pn) or [])
             ntype = _line_type_name(pn)
+            try:
+                rcode = region_code_for_number(pn) or "—"
+            except Exception:
+                rcode = "—"
+            cc = pn.country_code
+            cc_hint = CC_HINT.get(cc, "—")
 
             lines += [
-                "<b>── Local parse ──</b>",
-                f"Valid: <b>{'✅ Yes' if valid else '❌ No'}</b>",
-                f"Possible: <b>{'Yes' if possible else 'No'}</b>",
-                f"E164: <code>{e164}</code>",
+                "<b>── Validation ──</b>",
+                f"Valid number: <b>{'✅ Yes' if valid else '❌ No'}</b>",
+                f"Possible number: <b>{'Yes' if possible else 'No'}</b>",
+                "",
+                "<b>── Formats ──</b>",
+                f"E.164: <code>{e164}</code>",
                 f"International: <code>{intl}</code>",
                 f"National: <code>{national}</code>",
-                f"Country code: <code>+{pn.country_code}</code>",
-                f"National number: <code>{pn.national_number}</code>",
-                f"Region: <b>{region}</b>"
-                + (f" ({region_hi})" if region_hi and region_hi != region else ""),
-                f"Carrier: <b>{car}</b>",
-                f"Line type: <code>{ntype}</code>",
-                f"Timezone: <code>{', '.join(tzs) if tzs else '—'}</code>",
+                f"RFC3966: <code>{rfc}</code>",
+                "",
+                "<b>── Geography ──</b>",
+                f"Country code: <code>+{cc}</code> ({cc_hint})",
+                f"Region code: <code>{rcode}</code>",
+                f"Region (EN): <b>{region}</b>",
             ]
+            if region_hi and region_hi != region:
+                lines.append(f"Region (HI): <b>{region_hi}</b>")
+            lines += [
+                f"National number: <code>{pn.national_number}</code>",
+                f"Timezone(s): <code>{', '.join(tzs) if tzs else '—'}</code>",
+                "",
+                "<b>── Network ──</b>",
+                f"Carrier (EN): <b>{car}</b>",
+            ]
+            if car_hi and car_hi != car:
+                lines.append(f"Carrier (HI): <b>{car_hi}</b>")
+            lines.append(f"Line type: <code>{ntype}</code>")
         except Exception as e:
-            lines.append(f"Parse error: <code>{e}</code>")
+            lines.append(f"Parse error: <code>{type(e).__name__}: {e}</code>")
     else:
         lines.append("⚠️ <code>phonenumbers</code> package missing on server")
 
-    # Optional live API
     key = (NUMLOOKUP_API_KEY or os.getenv("NUMLOOKUP_API_KEY") or "").strip()
     if key:
-        lines.append("\n<b>── Live API ──</b>")
-        url = (
-            f"https://apilayer.net/api/validate"
-            f"?access_key={key}&number={e164}"
-        )
+        lines.append("\n<b>── Live API (NUMLOOKUP) ──</b>")
+        url = f"https://apilayer.net/api/validate?access_key={key}&number={e164}"
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -157,11 +197,11 @@ async def nuinfo_cmd(client, message: Message):
                     for k, label in [
                         ("valid", "Valid"),
                         ("number", "Number"),
-                        ("local_format", "Local"),
+                        ("local_format", "Local format"),
                         ("international_format", "International"),
                         ("country_prefix", "Prefix"),
                         ("country_code", "Country code"),
-                        ("country_name", "Country"),
+                        ("country_name", "Country name"),
                         ("location", "Location"),
                         ("carrier", "Carrier"),
                         ("line_type", "Line type"),
@@ -174,16 +214,16 @@ async def nuinfo_cmd(client, message: Message):
             lines.append(f"API error: <code>{e}</code>")
     else:
         lines.append(
-            "\nℹ️ Live API off — env me <code>NUMLOOKUP_API_KEY</code> set karo"
+            "\nℹ️ Live API off — set env <code>NUMLOOKUP_API_KEY</code>"
         )
 
     lines += [
         "",
-        "<b>── Limits ──</b>",
-        "❌ Owner name / Aadhaar / home address",
-        "❌ Linked other numbers / KYC dump",
-        "✅ Carrier · region · line type · formats",
-        "╚════════════════╝",
+        "<b>── Legal limits ──</b>",
+        "❌ Owner full name / Aadhaar / home address",
+        "❌ Linked SIMs / KYC dump / bank data",
+        "✅ Carrier · region · line type · formats · TZ",
+        "╚════════════════════════════╝",
     ]
 
     await message.reply_text("\n".join(lines))
