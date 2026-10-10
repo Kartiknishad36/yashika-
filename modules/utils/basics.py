@@ -1,11 +1,12 @@
 """
 Core: .ping .alive .id .help .uptime
-Ek hi premium HELP — sirf . commands
+Premium HELP with INLINE BUTTONS for every category.
 """
 import asyncio
 import time
 
-from pyrogram.types import Message
+from pyrogram import filters
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
 from core.clients import app
 from config import BOT_NAME, OWNER_USERNAME
@@ -24,107 +25,199 @@ def _uptime() -> str:
     return f"{h}h {m}m {s}s"
 
 
-async def _reply(message: Message, text: str):
+async def _reply(message: Message, text: str, reply_markup=None):
     try:
-        await message.reply_text(text)
+        await message.reply_text(text, reply_markup=reply_markup)
     except Exception as e:
         print(f"[basics] reply fail: {e}")
         try:
-            await app.send_message(message.chat.id, text)
+            await app.send_message(message.chat.id, text, reply_markup=reply_markup)
         except Exception as e2:
             print(f"[basics] send fail: {e2}")
 
 
-HELP = (
+# ─── Category texts ───
+PAGES = {
+    "home": (
+        f"╔══════════════════════════╗\n"
+        f"║ ✨💎 <b>{NAME.upper()} PREMIUM</b> 💎✨ ║\n"
+        f"║ 👑 {OWNER_TAG}\n"
+        f"╚══════════════════════════╝\n\n"
+        f"Neeche <b>buttons</b> se category kholo.\n"
+        f"Har command <code>.</code> prefix se.\n\n"
+        f"⏱ Uptime: <code>{{up}}</code>\n"
+        f"💎 Premium Userbot"
+    ),
+    "sys": (
+        "⚙️ <b>SYSTEM</b>\n\n"
+        "<code>.ping</code> — latency\n"
+        "<code>.alive</code> — status\n"
+        "<code>.id</code> — chat/user id\n"
+        "<code>.uptime</code> — uptime\n"
+        "<code>.help</code> — this menu\n"
+        "<code>.helpanim</code> — animated help"
+    ),
+    "vc": (
+        "🎵 <b>VC / MUSIC</b>\n\n"
+        "<code>.play</code> — play song\n"
+        "<code>.skip</code> — skip\n"
+        "<code>.stop</code> — stop\n"
+        "<code>.pause</code> / <code>.resume</code>\n"
+        "<code>.queue</code> — queue\n"
+        "<code>.vcwelcome on</code> / <code>off</code>"
+    ),
+    "owner": (
+        "👑 <b>OWNER</b>\n\n"
+        "<code>.addsudo</code> <code>.delsudo</code>\n"
+        "<code>.sudolist</code>\n"
+        "<code>.sessions</code> <code>.sessioninfo</code>\n"
+        "<code>.sessionstop</code> <code>.sessionstart</code>\n"
+        "Bot DM: <code>/login</code>"
+    ),
+    "mod": (
+        "🛡 <b>MOD</b>\n\n"
+        "<code>.ban</code> <code>.unban</code> <code>.kick</code>\n"
+        "<code>.mute</code> <code>.unmute</code>\n"
+        "<code>.promote</code> <code>.demote</code>\n"
+        "<code>.pin</code> <code>.unpin</code>"
+    ),
+    "tag": (
+        "📣 <b>TAG</b>\n\n"
+        "<code>.tagall</code> — all members\n"
+        "<code>.tag</code> — one by one\n"
+        "<code>.tagadmins</code> <code>.tagme</code>\n"
+        "<code>.tagallstop</code> <code>.tagstop</code>"
+    ),
+    "bro": (
+        "🔥 <b>BRO</b>\n\n"
+        "<code>.bro 10</code> — reply spam\n"
+        "<code>.broall</code> — group\n"
+        "<code>.brodm</code> — DM\n"
+        "<code>.brogroup</code> — long\n"
+        "<code>.unbro</code> <code>.brolist</code>"
+    ),
+    "global": (
+        "🌐 <b>GLOBAL</b>\n\n"
+        "<code>.gban</code> <code>.ungban</code> <code>.gbanlist</code>\n"
+        "<code>.warn</code> <code>.unwarn</code> <code>.warns</code>\n"
+        "<code>.broadcast</code> <code>.gcast</code> <code>.dmcast</code>"
+    ),
+    "clone": (
+        "👤 <b>CLONE</b>\n\n"
+        "<code>.clone</code> — copy profile\n"
+        "<code>.back</code> — restore\n"
+        "<code>.clonemode on/off</code>"
+    ),
+    "welcome": (
+        "👋 <b>WELCOME · AFK</b>\n\n"
+        "<code>.welcome on</code> <code>.welcome off</code>\n"
+        "<code>.setwelcome</code>\n"
+        "<code>.afk</code> <code>.unafk</code>"
+    ),
+    "tools": (
+        "🛠 <b>TOOLS</b>\n\n"
+        "<code>.calc</code> <code>.time</code> <code>.weather</code>\n"
+        "<code>.tr</code> <code>.qr</code> <code>.paste</code>\n"
+        "<code>.nuinfo</code> — 200+ phone details"
+    ),
+    "fun": (
+        "🎨 <b>FUN · ARTS</b>\n\n"
+        "<code>.cat</code> <code>.rose</code> <code>.hacker</code>\n"
+        "<code>.error</code> <code>.fuck</code> <code>.butterfly</code>\n"
+        "<code>.love</code> <code>.moon</code> <code>.heart</code>\n"
+        "<code>.yourmom</code> <code>.myson</code>\n"
+        "<code>.ok</code> <code>.vip</code> <code>.boss</code> <code>.pro</code>\n"
+        "<code>.king</code> <code>.yashika</code> <code>.win</code>\n"
+        "<code>.gg</code> <code>.hi</code> <code>.bye</code>\n"
+        "<code>.funhelp</code> <code>.arts</code>"
+    ),
+    "info": (
+        "ℹ️ <b>INFO</b>\n\n"
+        "<code>.info</code> <code>.whois</code> — full user\n"
+        "<code>.user</code> — deep scan → log\n"
+        "<code>.msginfo</code> <code>.chatinfo</code>\n"
+        "<code>.groupinfo</code> <code>.common</code>\n"
+        "<code>.nuinfo</code> — number 200+"
+    ),
+    "media": (
+        "🛡 <b>PROTECT · MEDIA</b>\n\n"
+        "<code>.protect</code> <code>.psend</code> <code>.pfile</code>\n"
+        "<code>.kang</code> <code>.dp</code> <code>.dpsave</code>"
+    ),
+    "auto": (
+        "💬 <b>AUTO REPLY</b>\n\n"
+        "<code>.autoreply on</code> <code>.autoreply off</code>\n"
+        "<code>.stylescan</code> <code>.stylestatus</code>"
+    ),
+    "pm": (
+        "🔒 <b>PM · TRACK · ANTI</b>\n\n"
+        "<code>.approve</code> <code>.unapprove</code>\n"
+        "<code>.antispam on</code> <code>.pmlog on</code>\n"
+        "<code>.track</code> <code>.trackadd</code> <code>.trackdel</code>\n"
+        "<code>.antilink</code> <code>.antidelete</code> <code>.antiflood</code>"
+    ),
+    "notes": (
+        "📝 <b>NOTES · ECONOMY</b>\n\n"
+        "<code>.save</code> <code>.get</code> <code>.notes</code>\n"
+        "<code>.bal</code> <code>.daily</code> <code>.rob</code>"
+    ),
+}
+
+
+def _main_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⚙️ System", callback_data="yh:sys"),
+            InlineKeyboardButton("🎵 VC", callback_data="yh:vc"),
+            InlineKeyboardButton("👑 Owner", callback_data="yh:owner"),
+        ],
+        [
+            InlineKeyboardButton("🛡 Mod", callback_data="yh:mod"),
+            InlineKeyboardButton("📣 Tag", callback_data="yh:tag"),
+            InlineKeyboardButton("🔥 Bro", callback_data="yh:bro"),
+        ],
+        [
+            InlineKeyboardButton("🌐 Global", callback_data="yh:global"),
+            InlineKeyboardButton("👤 Clone", callback_data="yh:clone"),
+            InlineKeyboardButton("👋 Welcome", callback_data="yh:welcome"),
+        ],
+        [
+            InlineKeyboardButton("🛠 Tools", callback_data="yh:tools"),
+            InlineKeyboardButton("🎨 Fun", callback_data="yh:fun"),
+            InlineKeyboardButton("ℹ️ Info", callback_data="yh:info"),
+        ],
+        [
+            InlineKeyboardButton("🎬 Media", callback_data="yh:media"),
+            InlineKeyboardButton("💬 Auto", callback_data="yh:auto"),
+            InlineKeyboardButton("🔒 PM", callback_data="yh:pm"),
+        ],
+        [
+            InlineKeyboardButton("📝 Notes", callback_data="yh:notes"),
+            InlineKeyboardButton("📖 Full Text", callback_data="yh:full"),
+        ],
+    ])
+
+
+def _back_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("⬅️ Back", callback_data="yh:home")],
+        [InlineKeyboardButton("📖 Full Text", callback_data="yh:full")],
+    ])
+
+
+HELP_FULL = (
     f"╔══════════════════════════╗\n"
     f"║ ✨💎 <b>{NAME.upper()} PREMIUM</b> 💎✨ ║\n"
     f"║ 👑 {OWNER_TAG}\n"
     f"╚══════════════════════════╝\n\n"
-
-    f"⚙️ <b>SYSTEM</b>\n"
-    f"<code>.ping</code> <code>.alive</code> <code>.id</code>\n"
-    f"<code>.uptime</code> <code>.help</code> <code>.helpanim</code>\n\n"
-
-    f"🎵 <b>VC</b>\n"
-    f"<code>.play</code> <code>.skip</code> <code>.stop</code>\n"
-    f"<code>.pause</code> <code>.resume</code> <code>.queue</code>\n"
-    f"<code>.vcwelcome on</code> <code>.vcwelcome off</code>\n\n"
-
-    f"👑 <b>OWNER</b>\n"
-    f"<code>.addsudo</code> <code>.delsudo</code> <code>.sudolist</code>\n\n"
-
-    f"🛡 <b>MOD</b>\n"
-    f"<code>.ban</code> <code>.unban</code> <code>.kick</code>\n"
-    f"<code>.mute</code> <code>.unmute</code>\n"
-    f"<code>.promote</code> <code>.demote</code>\n"
-    f"<code>.pin</code> <code>.unpin</code>\n\n"
-
-    f"📣 <b>TAG</b>\n"
-    f"<code>.tagall</code> <code>.tag</code> <code>.tagadmins</code>\n"
-    f"<code>.tagme</code> <code>.tagallstop</code> <code>.tagstop</code>\n\n"
-
-    f"🔥 <b>BRO</b>\n"
-    f"<code>.bro</code> <code>.broall</code> <code>.brodm</code>\n"
-    f"<code>.brogroup</code> <code>.unbro</code> <code>.brolist</code>\n\n"
-
-    f"🌐 <b>GLOBAL</b>\n"
-    f"<code>.gban</code> <code>.ungban</code> <code>.gbanlist</code>\n"
-    f"<code>.warn</code> <code>.unwarn</code> <code>.warns</code>\n\n"
-
-    f"📢 <b>CAST</b>\n"
-    f"<code>.broadcast</code> <code>.gcast</code> <code>.dmcast</code>\n\n"
-
-    f"👤 <b>CLONE</b>\n"
-    f"<code>.clone</code> <code>.back</code> <code>.clonemode</code>\n\n"
-
-    f"👋 <b>WELCOME · AFK</b>\n"
-    f"<code>.welcome on</code> <code>.welcome off</code>\n"
-    f"<code>.setwelcome</code> <code>.afk</code> <code>.unafk</code>\n\n"
-
-    f"🛠 <b>TOOLS</b>\n"
-    f"<code>.calc</code> <code>.time</code> <code>.weather</code>\n"
-    f"<code>.tr</code> <code>.qr</code> <code>.paste</code>\n"
-    f"<code>.nuinfo</code>\n\n"
-
-    f"🎨 <b>FUN · ARTS</b>\n"
-    f"<code>.cat</code> <code>.rose</code> <code>.hacker</code>\n"
-    f"<code>.error</code> <code>.fuck</code> <code>.butterfly</code>\n"
-    f"<code>.love</code> <code>.moon</code> <code>.heart</code>\n"
-    f"<code>.yourmom</code> <code>.myson</code>\n"
-    f"<code>.ok</code> <code>.vip</code> <code>.boss</code> <code>.pro</code>\n"
-    f"<code>.king</code> <code>.yashika</code> <code>.win</code>\n"
-    f"<code>.gg</code> <code>.hi</code> <code>.bye</code>\n"
-    f"<code>.funhelp</code> <code>.arts</code>\n\n"
-
-    f"ℹ️ <b>INFO</b>\n"
-    f"<code>.info</code> <code>.whois</code> <code>.user</code>\n"
-    f"<code>.msginfo</code> <code>.chatinfo</code> <code>.groupinfo</code>\n"
-    f"<code>.common</code>\n\n"
-
-    f"🛡 <b>PROTECT · MEDIA</b>\n"
-    f"<code>.protect</code> <code>.psend</code> <code>.pfile</code>\n"
-    f"<code>.kang</code> <code>.dp</code> <code>.dpsave</code>\n\n"
-
-    f"💬 <b>AUTO REPLY</b>\n"
-    f"<code>.autoreply on</code> <code>.autoreply off</code>\n"
-    f"<code>.stylescan</code> <code>.stylestatus</code>\n\n"
-
-    f"📂 <b>SESSIONS</b>\n"
-    f"<code>.sessions</code> <code>.sessioninfo</code>\n"
-    f"<code>.sessionstop</code> <code>.sessionstart</code>\n\n"
-
-    f"📝 <b>NOTES · ECONOMY</b>\n"
-    f"<code>.save</code> <code>.get</code> <code>.notes</code>\n"
-    f"<code>.bal</code> <code>.daily</code> <code>.rob</code>\n\n"
-
-    f"🔒 <b>PM · TRACK · ANTI</b>\n"
-    f"<code>.approve</code> <code>.unapprove</code>\n"
-    f"<code>.antispam on</code> <code>.pmlog on</code>\n"
-    f"<code>.track</code> <code>.trackadd</code> <code>.trackdel</code>\n"
-    f"<code>.antilink</code> <code>.antidelete</code> <code>.antiflood</code>\n\n"
-
-    f"💎 <b>{NAME}</b> · Premium Userbot\n"
-    f"Prefix: <b>.</b> only"
+    + "\n\n".join(
+        PAGES[k] for k in (
+            "sys", "vc", "owner", "mod", "tag", "bro", "global",
+            "clone", "welcome", "tools", "fun", "info", "media",
+            "auto", "pm", "notes",
+        )
+    )
+    + f"\n\n💎 <b>{NAME}</b> · Prefix <b>.</b> only"
 )
 
 
@@ -141,7 +234,10 @@ async def cmd_ping(client, message: Message):
         f"🏓 <b>PONG</b>\n"
         f"⚡ <code>{ms:.0f}ms</code>\n"
         f"⏱ <code>{_uptime()}</code>\n"
-        f"💎 Premium: {prem}"
+        f"💎 Premium: {prem}",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📖 Help", callback_data="yh:home")],
+        ]),
     )
 
 
@@ -158,6 +254,12 @@ async def cmd_alive(client, message: Message):
         f"💚 <b>{NAME}</b> ALIVE\n"
         f"👤 {un}\n💎 {prem}\n"
         f"⏱ <code>{_uptime()}</code>\n👑 {OWNER_TAG}",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("🏓 Ping", callback_data="yh:sys"),
+                InlineKeyboardButton("📖 Help", callback_data="yh:home"),
+            ],
+        ]),
     )
 
 
@@ -169,17 +271,28 @@ async def cmd_id(client, message: Message):
         if message.reply_to_message and message.reply_to_message.from_user
         else (message.from_user.id if message.from_user else sudoers.ME_ID)
     )
-    await _reply(message, f"🆔 Chat: <code>{cid}</code>\n👤 User: <code>{uid}</code>")
+    await _reply(
+        message,
+        f"🆔 Chat: <code>{cid}</code>\n👤 User: <code>{uid}</code>",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("ℹ️ .info", callback_data="yh:info")],
+        ]),
+    )
 
 
 @app.on_message(ub_cmd("uptime"), group=-20)
 async def cmd_uptime(client, message: Message):
-    await _reply(message, f"⏱ Uptime: <code>{_uptime()}</code>")
+    await _reply(
+        message,
+        f"⏱ Uptime: <code>{_uptime()}</code>",
+        reply_markup=_main_kb(),
+    )
 
 
 @app.on_message(ub_cmd("help", "menu", "cmds", "commands"), group=-20)
 async def cmd_help(client, message: Message):
-    await _reply(message, HELP)
+    text = PAGES["home"].format(up=_uptime())
+    await _reply(message, text, reply_markup=_main_kb())
 
 
 @app.on_message(ub_cmd("helpanim"), group=-20)
@@ -194,7 +307,34 @@ async def cmd_helpanim(client, message: Message):
         await m.delete()
     except Exception:
         pass
-    await _reply(message, HELP)
+    text = PAGES["home"].format(up=_uptime())
+    await _reply(message, text, reply_markup=_main_kb())
 
 
-print("[basics] single .help menu loaded")
+@app.on_callback_query(filters.regex(r"^yh:"))
+async def help_buttons(client, cq: CallbackQuery):
+    key = (cq.data or "").split(":", 1)[-1]
+    try:
+        if key == "home":
+            text = PAGES["home"].format(up=_uptime())
+            await cq.message.edit_text(text, reply_markup=_main_kb())
+        elif key == "full":
+            # full may be long — try edit else send
+            try:
+                await cq.message.edit_text(HELP_FULL[:3900], reply_markup=_back_kb())
+            except Exception:
+                await cq.message.reply_text(HELP_FULL[:3900], reply_markup=_back_kb())
+        elif key in PAGES:
+            await cq.message.edit_text(PAGES[key], reply_markup=_back_kb())
+        else:
+            await cq.answer("Unknown", show_alert=False)
+            return
+        await cq.answer()
+    except Exception as e:
+        try:
+            await cq.answer(str(e)[:100], show_alert=True)
+        except Exception:
+            pass
+
+
+print("[basics] premium HELP + buttons loaded")
