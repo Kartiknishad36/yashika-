@@ -1,0 +1,46 @@
+name: yashika-userbot
+region: sgp
+services:
+  - name: worker
+    github:
+      repo: Kartiknishad36/yashika-
+      branch: main
+      deploy_on_push: true
+    dockerfile_path: Dockerfile
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 8080
+    envs:
+      - key: API_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: API_HASH
+        scope: RUN_TIME
+        type: SECRET
+      - key: BOT_TOKEN
+        scope: RUN_TIME
+        type: SECRET
+      - key: OWNER_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: STRING_SESSION
+        scope: RUN_TIME
+        type: SECRET
+      - key: LOG_GROUP_ID
+        scope: RUN_TIME
+        type: SECRET
+      - key: MONGO_URI
+        scope: RUN_TIME
+        type: SECRET
+      - key: BOT_NAME
+        scope: RUN_TIME
+        value: Yashika
+      - key: MONGO_DB
+        scope: RUN_TIME
+        value: yashika
+      - key: AUTO_DELETE
+        scope: RUN_TIME
+        value: "true"
+      - key: DELETE_DELAY
+        scope: RUN_TIME
+        value: "1.5"
