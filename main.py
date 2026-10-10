@@ -1,7 +1,9 @@
-"""Yashika — Bot + optional Userbot (Railway ready)"""
+"""Yashika — Bot + optional Userbot (Railway / Render ready)"""
 import asyncio
 import importlib
+import os
 from datetime import datetime, timezone
+from threading import Thread
 
 from config import (
     API_ID, API_HASH, BOT_TOKEN, STRING_SESSION, OWNER_ID,
@@ -10,6 +12,35 @@ from config import (
 from core.clients import bot, app
 from core.autodelete import register_trigger_autodelete, register_bot_autodelete
 from core.notify import notify_owner
+
+
+def keep_alive():
+    """Render Web Service needs an open PORT — health endpoint."""
+    try:
+        from flask import Flask
+    except ImportError:
+        print("[web] Flask missing — skip keep_alive")
+        return
+
+    web = Flask(__name__)
+
+    @web.route("/")
+    def home():
+        return f"{BOT_NAME or 'Yashika'} is Running!", 200
+
+    @web.route("/health")
+    def health():
+        return {"ok": True, "bot": bool(BOT_TOKEN), "ub": bool(STRING_SESSION)}, 200
+
+    port = int(os.getenv("PORT", os.getenv("WEB_PORT", "10000")))
+
+    def _run():
+        web.run(host="0.0.0.0", port=port, threaded=True, use_reloader=False)
+
+    t = Thread(target=_run, daemon=True)
+    t.start()
+    print(f"[web] health on 0.0.0.0:{port}")
+
 
 BOT_MODULES = [
     "modules.bot.start",
@@ -101,14 +132,19 @@ def _load(mods, label):
 
 
 async def main():
+    # MUST bind PORT early for Render Web Service health checks
+    keep_alive()
+
     if not API_ID or not API_HASH:
         raise SystemExit("API_ID / API_HASH required")
     if not BOT_TOKEN and not STRING_SESSION:
         raise SystemExit("Set BOT_TOKEN and/or STRING_SESSION")
 
-    print(f"[boot] BOT_TOKEN={'yes' if BOT_TOKEN else 'NO'} STRING_SESSION={'yes' if STRING_SESSION else 'NO'} OWNER={OWNER_ID}")
+    print(
+        f"[boot] BOT_TOKEN={'yes' if BOT_TOKEN else 'NO'} "
+        f"STRING_SESSION={'yes' if STRING_SESSION else 'NO'} OWNER={OWNER_ID}"
+    )
 
-    # Early auth so commands work even before get_me
     try:
         from modules.owner.sudoers import set_me_id, SUDO_USERS
         if OWNER_ID:
@@ -159,7 +195,6 @@ async def main():
                 SUDO_USERS.add(ume.id)
                 if OWNER_ID and ume.id != OWNER_ID:
                     print(f"[userbot] WARN: session id {ume.id} != OWNER_ID {OWNER_ID}")
-                    print("[userbot] Commands still work for session account (ME_ID)")
             except Exception as e:
                 print(f"[userbot] me: {e}")
             try:
@@ -180,7 +215,7 @@ async def main():
                 print(f"[userbot] style scan: {e}")
         except Exception as e:
             print(f"[userbot] START FAIL: {type(e).__name__}: {e}")
-            print("[userbot] STRING_SESSION invalid/expired — only BOT works. Regenerate session.")
+            print("[userbot] STRING_SESSION invalid/expired — only BOT works.")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     client = bot or app
@@ -202,7 +237,7 @@ async def main():
         except Exception:
             pass
 
-    print("[READY] worker running — test .ping on user account / /help on bot")
+    print("[READY] running — health / · test .ping / /help")
     await asyncio.Event().wait()
 
 
