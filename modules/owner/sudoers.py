@@ -17,7 +17,7 @@ KNOWN_CMDS = {
     "ping", "alive", "id", "help", "menu", "cmds", "commands", "helpanim", "uptime",
     "ban", "unban", "kick", "mute", "unmute", "promote", "demote", "pin", "unpin",
     "tagall", "tag", "tagallstop", "tagstop", "tagadmins", "tagme",
-    "bro", "broall", "unbro", "brostop", "brolist",
+    "bro", "broall", "brodm", "brogroup", "unbro", "brostop", "brolist",
     "gban", "ungban", "gbanlist", "warn", "unwarn", "warns", "resetwarns",
     "broadcast", "gcast", "dmcast", "clone", "clonemode", "back",
     "welcome", "setwelcome", "vcwelcome", "afk", "unafk",
@@ -27,9 +27,11 @@ KNOWN_CMDS = {
     "ok", "vip", "boss", "pro", "king", "yashika", "win", "gg", "hi", "bye",
     "info", "whois", "user", "msginfo", "chatinfo", "groupinfo", "common",
     "protect", "psend", "pfile", "kang", "dp", "dpsave",
-    "track", "trackadd", "trackdel", "antilink", "antidelete", "antiflood",
+    "track", "trackadd", "trackdel", "trackinfo",
+    "antilink", "antidelete", "antiflood",
     "save", "get", "notes", "bal", "daily", "rob",
     "approve", "unapprove", "approved",
+    "antispam", "pmlog",
     "login", "addsession", "cancellogin", "mylogin", "logins",
     "sessions", "sessioninfo", "sessionstats", "sessionstop", "sessionstart", "sinfo",
     "addsudo", "delsudo", "sudolist",
@@ -77,7 +79,7 @@ def _is_self(message: Message) -> bool:
 
 
 def ub_cmd(*names):
-    """Match .cmd !cmd /cmd on YOUR outgoing messages only."""
+    """Match .cmd !cmd on YOUR outgoing messages only."""
     want = {str(n).lower().lstrip(".!/") for n in names}
 
     async def _filter(_, __, message: Message):
@@ -85,7 +87,7 @@ def ub_cmd(*names):
             if not _is_self(message):
                 return False
         text = (message.text or message.caption or "").strip()
-        if not text or text[0] not in ".!/":
+        if not text or text[0] not in ".!":
             return False
         parts = text[1:].split()
         if not parts:
@@ -108,8 +110,6 @@ def is_allowed(message: Message) -> bool:
 
 
 def sudo_only(func):
-    """Always run for matched ub_cmd; show errors to chat."""
-
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
         try:
