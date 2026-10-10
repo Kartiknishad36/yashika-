@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  yashika:
+    build: .
+    container_name: yashika-userbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - BOT_NAME=${BOT_NAME:-Yashika}
+      - MONGO_DB=${MONGO_DB:-yashika}
+      - AUTO_DELETE=${AUTO_DELETE:-true}
+      - DELETE_DELAY=${DELETE_DELAY:-1.5}
+    volumes:
+      - ./cookies.txt:/app/cookies.txt:ro
+    # No public ports needed for userbot worker
