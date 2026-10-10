@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "main.py"
+    }
+  ],
+  "env": {
+    "BOT_NAME": "Yashika"
+  },
+  "_comment": "Vercel is serverless — not ideal for always-on Telegram userbot. Prefer Railway/Render/Koyeb/VPS."
+}
