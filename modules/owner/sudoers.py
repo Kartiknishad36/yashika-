@@ -1,6 +1,6 @@
 """
 Userbot auth + command filter
-Commands ONLY from YOUR account (outgoing messages).
+Accept: outgoing messages OR from_user == ME_ID / OWNER_ID
 """
 import functools
 from pyrogram import filters
@@ -21,7 +21,7 @@ KNOWN_CMDS = {
     "gban", "ungban", "gbanlist", "warn", "unwarn", "warns", "resetwarns",
     "broadcast", "gcast", "dmcast", "clone", "clonemode", "back",
     "welcome", "setwelcome", "vcwelcome", "afk", "unafk",
-    "calc", "time", "weather", "tr", "nuinfo", "numinfo", "number", "qr", "paste",
+    "calc", "time", "weather", "tr", "translate", "nuinfo", "numinfo", "number", "qr", "paste",
     "cat", "rose", "hacker", "hack", "error", "fuck", "butterfly", "love",
     "moon", "chand", "heart", "heartart", "yourmom", "myson", "funhelp", "arts",
     "ok", "vip", "boss", "pro", "king", "yashika", "win", "gg", "hi", "bye",
@@ -59,14 +59,19 @@ def set_me_id(uid: int):
     global ME_ID
     ME_ID = int(uid)
     SUDO_USERS.add(ME_ID)
-    print(f"[sudoers] ME_ID set to {ME_ID}")
+    if OWNER_ID:
+        SUDO_USERS.add(OWNER_ID)
+    print(f"[sudoers] ME_ID={ME_ID} OWNER={OWNER_ID} sudo={len(SUDO_USERS)}")
 
 
 def _is_self(message: Message) -> bool:
+    # Own outgoing always allowed
     if getattr(message, "outgoing", False):
         return True
+    uid = None
     try:
-        uid = message.from_user.id if message.from_user else None
+        if message.from_user:
+            uid = message.from_user.id
     except Exception:
         uid = None
     if uid is None:
@@ -75,17 +80,18 @@ def _is_self(message: Message) -> bool:
         return True
     if OWNER_ID and uid == OWNER_ID:
         return True
+    if uid in SUDO_USERS:
+        return True
     return False
 
 
 def ub_cmd(*names):
-    """Match .cmd !cmd on YOUR outgoing messages only."""
+    """Match .cmd or !cmd from owner / me account."""
     want = {str(n).lower().lstrip(".!/") for n in names}
 
     async def _filter(_, __, message: Message):
-        if not getattr(message, "outgoing", False):
-            if not _is_self(message):
-                return False
+        if not _is_self(message):
+            return False
         text = (message.text or message.caption or "").strip()
         if not text or text[0] not in ".!":
             return False
@@ -112,6 +118,8 @@ def is_allowed(message: Message) -> bool:
 def sudo_only(func):
     @functools.wraps(func)
     async def wrapper(client, message: Message, *args, **kwargs):
+        if not _is_self(message):
+            return
         try:
             return await func(client, message, *args, **kwargs)
         except Exception as e:
@@ -134,93 +142,93 @@ def owner_only(func):
     return sudo_only(func)
 
 
-@app.on_message(ub_cmd("addsudo"), group=-5)
-@owner_only
-async def addsudo_cmd(client, message: Message):
-    parts = (message.text or "").split()
-    if not message.reply_to_message and len(parts) < 2:
-        await message.reply_text("❌ Usage: reply + <code>.addsudo</code> ya <code>.addsudo id</code>")
-        return
+if app is not None:
+
+    @app.on_message(ub_cmd("addsudo"), group=-5)
+    @owner_only
+    async def addsudo_cmd(client, message: Message):
+        parts = (message.text or "").split()
+        if not message.reply_to_message and len(parts) < 2:
+            await message.reply_text("❌ Usage: reply + <code>.addsudo</code> ya <code>.addsudo id</code>")
+            return
+        try:
+            target = (
+                message.reply_to_message.from_user.id
+                if message.reply_to_message and message.reply_to_message.from_user
+                else int(parts[1])
+            )
+        except Exception:
+            await message.reply_text("❌ Invalid ID")
+            return
+        await add_sudo(target)
+        SUDO_USERS.add(target)
+        await message.reply_text(f"✅ Sudo added <code>{target}</code>")
+
+    @app.on_message(ub_cmd("delsudo"), group=-5)
+    @owner_only
+    async def delsudo_cmd(client, message: Message):
+        parts = (message.text or "").split()
+        if not message.reply_to_message and len(parts) < 2:
+            await message.reply_text("❌ Usage: <code>.delsudo id</code>")
+            return
+        try:
+            target = (
+                message.reply_to_message.from_user.id
+                if message.reply_to_message and message.reply_to_message.from_user
+                else int(parts[1])
+            )
+        except Exception:
+            await message.reply_text("❌ Invalid ID")
+            return
+        if target == OWNER_ID:
+            await message.reply_text("❌ OWNER cannot remove")
+            return
+        await remove_sudo(target)
+        SUDO_USERS.discard(target)
+        await message.reply_text(f"✅ Removed <code>{target}</code>")
+
+    @app.on_message(ub_cmd("sudolist"), group=-5)
+    @owner_only
+    async def sudolist_cmd(client, message: Message):
+        lines = "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS)) or "—"
+        await message.reply_text(f"<b>Sudo list</b>\n{lines}\nOWNER: <code>{OWNER_ID}</code>")
+
+    @app.on_message(
+        filters.create(
+            lambda _, __, m: (
+                _is_self(m)
+                and bool((m.text or "").strip())
+                and (m.text or "")[0] in ".!"
+            )
+        ),
+        group=99,
+    )
+    async def _unknown_hint(client, message: Message):
+        text = (message.text or "").strip()
+        parts = text[1:].split()
+        if not parts:
+            return
+        cmd = parts[0].lower().split("@")[0]
+        if cmd in KNOWN_CMDS:
+            return
+        try:
+            await message.reply_text(
+                f"❓ Unknown: <code>.{cmd}</code>\n"
+                f"📖 <code>.help</code> · 🏓 <code>.ping</code>"
+            )
+        except Exception:
+            pass
+
     try:
-        target = (
-            message.reply_to_message.from_user.id
-            if message.reply_to_message and message.reply_to_message.from_user
-            else int(parts[1])
-        )
-    except Exception:
-        await message.reply_text("❌ Invalid ID")
-        return
-    await add_sudo(target)
-    SUDO_USERS.add(target)
-    await message.reply_text(f"✅ Sudo added <code>{target}</code>")
 
+        def _ub_command(commands, prefixes=None, case_sensitive=False):
+            if isinstance(commands, str):
+                commands = [commands]
+            return ub_cmd(*[str(c).lower().lstrip("./!") for c in commands])
 
-@app.on_message(ub_cmd("delsudo"), group=-5)
-@owner_only
-async def delsudo_cmd(client, message: Message):
-    parts = (message.text or "").split()
-    if not message.reply_to_message and len(parts) < 2:
-        await message.reply_text("❌ Usage: <code>.delsudo id</code>")
-        return
-    try:
-        target = (
-            message.reply_to_message.from_user.id
-            if message.reply_to_message and message.reply_to_message.from_user
-            else int(parts[1])
-        )
-    except Exception:
-        await message.reply_text("❌ Invalid ID")
-        return
-    if target == OWNER_ID:
-        await message.reply_text("❌ OWNER cannot remove")
-        return
-    await remove_sudo(target)
-    SUDO_USERS.discard(target)
-    await message.reply_text(f"✅ Removed <code>{target}</code>")
-
-
-@app.on_message(ub_cmd("sudolist"), group=-5)
-@owner_only
-async def sudolist_cmd(client, message: Message):
-    lines = "\n".join(f"• <code>{uid}</code>" for uid in sorted(SUDO_USERS)) or "—"
-    await message.reply_text(f"<b>Sudo list</b>\n{lines}\nOWNER: <code>{OWNER_ID}</code>")
-
-
-@app.on_message(
-    filters.create(
-        lambda _, __, m: (
-            getattr(m, "outgoing", False)
-            and bool((m.text or "").strip())
-            and (m.text or "")[0] in ".!"
-        )
-    ),
-    group=99,
-)
-async def _unknown_hint(client, message: Message):
-    text = (message.text or "").strip()
-    parts = text[1:].split()
-    if not parts:
-        return
-    cmd = parts[0].lower().split("@")[0]
-    if cmd in KNOWN_CMDS:
-        return
-    try:
-        await message.reply_text(
-            f"❓ Unknown: <code>.{cmd}</code>\n"
-            f"📖 <code>.help</code> · 🏓 <code>.ping</code>"
-        )
-    except Exception:
-        pass
-
-
-try:
-
-    def _ub_command(commands, prefixes=None, case_sensitive=False):
-        if isinstance(commands, str):
-            commands = [commands]
-        return ub_cmd(*[str(c).lower().lstrip("./!") for c in commands])
-
-    filters.command = _ub_command
-    print("[sudoers] ub_cmd OUTGOING-only + filters.command patch ON")
-except Exception as e:
-    print(f"[sudoers] patch skip: {e}")
+        filters.command = _ub_command
+        print("[sudoers] ub_cmd + filters.command patch ON")
+    except Exception as e:
+        print(f"[sudoers] patch skip: {e}")
+else:
+    print("[sudoers] skip handlers — app is None (set STRING_SESSION)")
