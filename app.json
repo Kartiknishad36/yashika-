@@ -1,0 +1,79 @@
+{
+  "name": "Yashika Premium Userbot",
+  "description": "Telegram userbot + bot hybrid — owner-only, premium help buttons, 200+ info",
+  "repository": "https://github.com/Kartiknishad36/yashika-",
+  "logo": "https://img.icons8.com/fluency/96/telegram-app.png",
+  "keywords": ["telegram", "userbot", "pyrogram", "kurigram", "yashika"],
+  "success_url": "/",
+  "stack": "heroku-22",
+  "formation": {
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "env": {
+    "API_ID": {
+      "description": "Telegram API ID from https://my.telegram.org",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API HASH from https://my.telegram.org",
+      "required": true
+    },
+    "BOT_TOKEN": {
+      "description": "Bot token from @BotFather",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Your numeric Telegram user ID",
+      "required": true
+    },
+    "STRING_SESSION": {
+      "description": "Pyrogram STRING_SESSION for userbot (optional but recommended)",
+      "required": false
+    },
+    "LOG_GROUP_ID": {
+      "description": "Private log group ID (-100...)",
+      "required": false
+    },
+    "MONGO_URI": {
+      "description": "MongoDB connection string (optional)",
+      "required": false
+    },
+    "MONGO_DB": {
+      "description": "Mongo database name",
+      "value": "yashika",
+      "required": false
+    },
+    "BOT_NAME": {
+      "description": "Display name",
+      "value": "Yashika",
+      "required": false
+    },
+    "OWNER_USERNAME": {
+      "description": "Your Telegram username without @",
+      "required": false
+    },
+    "AUTO_DELETE": {
+      "description": "Auto delete command messages",
+      "value": "true",
+      "required": false
+    },
+    "DELETE_DELAY": {
+      "description": "Seconds before auto-delete",
+      "value": "1.5",
+      "required": false
+    },
+    "NUMLOOKUP_API_KEY": {
+      "description": "Optional numlookup / apilayer key for .nuinfo",
+      "required": false
+    }
+  },
+  "addons": [],
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ]
+}
