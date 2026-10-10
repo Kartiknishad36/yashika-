@@ -1,0 +1,19 @@
+app = "yashika-userbot"
+primary_region = "sin"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  BOT_NAME = "Yashika"
+  MONGO_DB = "yashika"
+  AUTO_DELETE = "true"
+  DELETE_DELAY = "1.5"
+
+[processes]
+  worker = "python3 main.py"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
