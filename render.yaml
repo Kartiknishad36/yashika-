@@ -1,15 +1,33 @@
 services:
   - type: worker
     name: yashika-userbot
-    env: python
+    runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: python3 main.py
+    autoDeploy: true
     envVars:
       - key: API_ID
         sync: false
       - key: API_HASH
         sync: false
-      - key: STRING_SESSION
+      - key: BOT_TOKEN
         sync: false
       - key: OWNER_ID
         sync: false
+      - key: STRING_SESSION
+        sync: false
+      - key: LOG_GROUP_ID
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: yashika
+      - key: BOT_NAME
+        value: Yashika
+      - key: AUTO_DELETE
+        value: "true"
+      - key: DELETE_DELAY
+        value: "1.5"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
