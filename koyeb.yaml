@@ -1,0 +1,30 @@
+name: yashika-userbot
+services:
+  - name: worker
+    type: web
+    regions:
+      - fra
+    instance_types:
+      - type: free
+    scalings:
+      - min: 1
+        max: 1
+    env:
+      - key: BOT_NAME
+        value: Yashika
+      - key: MONGO_DB
+        value: yashika
+      - key: AUTO_DELETE
+        value: "true"
+      - key: DELETE_DELAY
+        value: "1.5"
+      # Set secrets in Koyeb dashboard:
+      # API_ID, API_HASH, BOT_TOKEN, OWNER_ID, STRING_SESSION, LOG_GROUP_ID, MONGO_URI
+    routes: []
+    ports: []
+    docker:
+      dockerfile: Dockerfile
+    # Or buildpack:
+    # buildpack:
+    #   build_command: pip install -r requirements.txt
+    #   run_command: python3 main.py
