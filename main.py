@@ -17,18 +17,22 @@ BOT_MODULES = [
 ]
 
 UB_MODULES = [
+    # owner core
     "modules.owner.sudoers",
     "modules.owner.login",
     "modules.owner.session_manager",
     "modules.owner.pmguard",
+    "modules.owner.pm_extra",
     "modules.owner.clone",
     "modules.owner.tracker",
     "modules.owner.raid_spam",
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
+    # vc
     "modules.vc.play",
     "modules.vc.controls",
     "modules.utils.vc_welcome",
+    # global mod
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
     "modules.global_mod.gdel",
@@ -49,12 +53,13 @@ UB_MODULES = [
     "modules.global_mod.zombies",
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
+    # economy
     "modules.economy.basic",
+    # utils
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.intel",
     "modules.utils.nuinfo",
-    "modules.utils.user_scan",
     "modules.utils.mongo_dp",
     "modules.utils.fun",
     "modules.utils.afk",
@@ -77,8 +82,8 @@ UB_MODULES = [
     "modules.utils.autojoin",
     "modules.utils.autoreply",
     "modules.utils.dark_spy",
-    "modules.utils.spy_pack",
     "modules.utils.voice",
+    # media
     "modules.media.kang",
     "modules.media.download",
     "modules.media.social",
@@ -172,7 +177,6 @@ async def main():
                 print("[userbot] PyTgCalls ready")
             except Exception as e:
                 print(f"[userbot] PyTgCalls: {e}")
-            # style scan background
             try:
                 from modules.utils.autoreply import boot_style_scan
                 asyncio.create_task(boot_style_scan())
