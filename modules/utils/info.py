@@ -149,10 +149,8 @@ async def info_cmd(client, message: Message):
         bio = getattr(chat, "bio", None) or "—"
         status = _status_line(getattr(user, "status", None))
         is_owner = bool(OWNER_ID and user.id == OWNER_ID)
-        link = (
-            f"<a href='tg://user?id={user.id}'>"
-            f"{'👑 OWNER' if is_owner else _esc(user.first_name or user.id)}"</a>"
-        )
+        _disp = "👑 OWNER" if is_owner else _esc(user.first_name or user.id)
+        link = f"<a href='tg://user?id={user.id}'>{_disp}</a>"
 
         photo_n = 0
         first_photo = None
@@ -167,7 +165,6 @@ async def info_cmd(client, message: Message):
         dc = getattr(user, "dc_id", None)
         dc_loc = DC_MAP.get(dc, "Unknown") if dc else "—"
 
-        # emoji status / premium extras
         emoji_status = getattr(user, "emoji_status", None)
         emoji_line = "—"
         if emoji_status is not None:
@@ -218,7 +215,6 @@ async def info_cmd(client, message: Message):
             f"👀 Common chats with you: <code>{common_n}</code>",
         ]
 
-        # Restrictions detail
         restrictions = getattr(user, "restrictions", None) or getattr(user, "restriction_reason", None)
         if restrictions:
             lines.append("")
@@ -229,7 +225,6 @@ async def info_cmd(client, message: Message):
             else:
                 lines.append(f"• {_esc(restrictions)}")
 
-        # This chat membership
         if message.chat and message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
             lines.append("")
             lines.append("<b>─── This chat ───</b>")
@@ -263,7 +258,6 @@ async def info_cmd(client, message: Message):
                         val = getattr(perms, attr, None)
                         if val is not None:
                             lines.append(f"  · {label}: {_yn(val)}")
-                # restrictions on member
                 perms_r = getattr(member, "permissions", None)
                 if perms_r and member.status == ChatMemberStatus.RESTRICTED:
                     lines.append("<b>Member permissions:</b>")
@@ -287,7 +281,6 @@ async def info_cmd(client, message: Message):
             except Exception:
                 pass
 
-        # Common chats list (detailed)
         if common_list:
             lines.append("")
             lines.append("<b>─── Common chats (sample) ───</b>")
@@ -320,7 +313,6 @@ async def info_cmd(client, message: Message):
             pass
 
         if first_photo:
-            # caption limit ~1024 — send photo + full text separately
             cap = (
                 f"💎 <b>{_esc(full) or user.id}</b>\n"
                 f"ID: <code>{user.id}</code> · @{user.username or '—'}\n"
