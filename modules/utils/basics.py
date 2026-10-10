@@ -64,8 +64,8 @@ HELP = (
     f"<code>.tagme</code> <code>.tagallstop</code> <code>.tagstop</code>\n\n"
 
     f"🔥 <b>BRO</b>\n"
-    f"<code>.bro</code> <code>.broall</code> <code>.unbro</code>\n"
-    f"<code>.brostop</code> <code>.brolist</code>\n\n"
+    f"<code>.bro</code> <code>.broall</code> <code>.brodm</code>\n"
+    f"<code>.brogroup</code> <code>.unbro</code> <code>.brolist</code>\n\n"
 
     f"🌐 <b>GLOBAL</b>\n"
     f"<code>.gban</code> <code>.ungban</code> <code>.gbanlist</code>\n"
@@ -107,7 +107,6 @@ HELP = (
 
     f"💬 <b>AUTO REPLY</b>\n"
     f"<code>.autoreply on</code> <code>.autoreply off</code>\n"
-    f"<code>.autoreply set</code> <code>.autoreply mode</code>\n"
     f"<code>.stylescan</code> <code>.stylestatus</code>\n\n"
 
     f"📂 <b>SESSIONS</b>\n"
@@ -120,6 +119,7 @@ HELP = (
 
     f"🔒 <b>PM · TRACK · ANTI</b>\n"
     f"<code>.approve</code> <code>.unapprove</code>\n"
+    f"<code>.antispam on</code> <code>.pmlog on</code>\n"
     f"<code>.track</code> <code>.trackadd</code> <code>.trackdel</code>\n"
     f"<code>.antilink</code> <code>.antidelete</code> <code>.antiflood</code>\n\n"
 
