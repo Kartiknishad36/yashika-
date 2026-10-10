@@ -1,6 +1,10 @@
+# Option A (recommended free): Background Worker — no port needed
+# Option B: Web Service — main.py binds $PORT (Flask health)
+
 services:
+  # Prefer this if available on your plan
   - type: worker
-    name: yashika-userbot
+    name: yashika-worker
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -31,3 +35,7 @@ services:
         value: "1.5"
       - key: PYTHON_VERSION
         value: "3.11.0"
+
+  # If you already created a Web Service (Docker / Python):
+  # Settings → Health Check Path = /
+  # Start Command = python3 main.py
