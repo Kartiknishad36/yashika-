@@ -1,16 +1,46 @@
+# ===== Telegram core =====
 kurigram==2.2.24
 tgcrypto==1.2.5
-python-dotenv==1.2.2
 py-tgcalls==2.3.3
+
+# ===== Config / env =====
+python-dotenv==1.2.2
+
+# ===== HTTP clients =====
 requests==2.33.1
 aiohttp==3.13.2
 httpx==0.27.2
-yt-dlp
-youtube-search-python==1.6.6
-qrcode[pil]
-Pillow
-phonenumbers
-edge-tts
-gTTS
+urllib3>=2.0.0
+certifi
+
+# ===== Database =====
 motor==3.6.0
 pymongo==4.9.2
+dnspython>=2.4.0
+
+# ===== Music / media =====
+yt-dlp
+youtube-search-python==1.6.6
+
+# ===== Images / QR =====
+qrcode[pil]
+Pillow>=10.0.0
+
+# ===== Phone intel (.nuinfo) =====
+phonenumbers>=8.13.0
+
+# ===== TTS / voice =====
+edge-tts>=6.1.0
+gTTS>=2.5.0
+
+# ===== Utils =====
+psutil>=5.9.0
+Flask>=3.0.0
+
+# ===== Async helpers =====
+aiofiles>=23.0.0
+
+# ===== Optional / soft (safe to install) =====
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+python-dateutil>=2.8.0
