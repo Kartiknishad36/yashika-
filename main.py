@@ -17,7 +17,6 @@ BOT_MODULES = [
 ]
 
 UB_MODULES = [
-    # owner core
     "modules.owner.sudoers",
     "modules.owner.login",
     "modules.owner.session_manager",
@@ -28,11 +27,9 @@ UB_MODULES = [
     "modules.owner.raid_spam",
     "modules.owner.ghostmod",
     "modules.owner.secretlog",
-    # vc
     "modules.vc.play",
     "modules.vc.controls",
     "modules.utils.vc_welcome",
-    # global mod
     "modules.global_mod.gban",
     "modules.global_mod.gmute",
     "modules.global_mod.gdel",
@@ -53,9 +50,7 @@ UB_MODULES = [
     "modules.global_mod.zombies",
     "modules.global_mod.autokick",
     "modules.global_mod.admin_extra",
-    # economy
     "modules.economy.basic",
-    # utils
     "modules.utils.basics",
     "modules.utils.info",
     "modules.utils.intel",
@@ -83,7 +78,6 @@ UB_MODULES = [
     "modules.utils.autoreply",
     "modules.utils.dark_spy",
     "modules.utils.voice",
-    # media
     "modules.media.kang",
     "modules.media.download",
     "modules.media.social",
@@ -102,7 +96,7 @@ def _load(mods, label):
             print(f"[{label}] WARN {m}: {type(e).__name__}: {e}")
     print(f"[{label}] loaded {ok}/{len(mods)}")
     if failed:
-        print(f"[{label}] FAILED: {', '.join(failed)}")
+        print(f"[{label}] FAILED ({len(failed)}): {', '.join(failed)}")
     return ok
 
 
@@ -112,11 +106,16 @@ async def main():
     if not BOT_TOKEN and not STRING_SESSION:
         raise SystemExit("Set BOT_TOKEN and/or STRING_SESSION")
 
+    print(f"[boot] BOT_TOKEN={'yes' if BOT_TOKEN else 'NO'} STRING_SESSION={'yes' if STRING_SESSION else 'NO'} OWNER={OWNER_ID}")
+
+    # Early auth so commands work even before get_me
     try:
-        importlib.import_module("modules.owner.sudoers")
-        importlib.import_module("modules.owner.session_manager")
+        from modules.owner.sudoers import set_me_id, SUDO_USERS
+        if OWNER_ID:
+            SUDO_USERS.add(OWNER_ID)
+            set_me_id(OWNER_ID)
     except Exception as e:
-        print(f"[boot] core: {e}")
+        print(f"[boot] early sudo: {e}")
 
     if bot is not None:
         _load(BOT_MODULES, "bot")
@@ -133,7 +132,7 @@ async def main():
         except Exception as e:
             print(f"[boot] sudoers: {e}")
     else:
-        print("[boot] STRING_SESSION missing — userbot off")
+        print("[boot] STRING_SESSION missing — userbot OFF (. commands will NOT work)")
 
     if MONGO_URI:
         try:
@@ -146,12 +145,6 @@ async def main():
         await bot.start()
         bme = await bot.get_me()
         print(f"[bot] @{bme.username} id={bme.id}")
-        try:
-            from modules.owner.sudoers import SUDO_USERS
-            if OWNER_ID:
-                SUDO_USERS.add(OWNER_ID)
-        except Exception:
-            pass
 
     if app is not None:
         try:
@@ -164,6 +157,9 @@ async def main():
                 if OWNER_ID:
                     SUDO_USERS.add(OWNER_ID)
                 SUDO_USERS.add(ume.id)
+                if OWNER_ID and ume.id != OWNER_ID:
+                    print(f"[userbot] WARN: session id {ume.id} != OWNER_ID {OWNER_ID}")
+                    print("[userbot] Commands still work for session account (ME_ID)")
             except Exception as e:
                 print(f"[userbot] me: {e}")
             try:
@@ -180,28 +176,33 @@ async def main():
             try:
                 from modules.utils.autoreply import boot_style_scan
                 asyncio.create_task(boot_style_scan())
-                print("[userbot] style scan scheduled")
             except Exception as e:
                 print(f"[userbot] style scan: {e}")
         except Exception as e:
-            print(f"[userbot] START FAIL (STRING_SESSION invalid?): {type(e).__name__}: {e}")
-            print("[userbot] Continuing with BOT only — fix STRING_SESSION")
+            print(f"[userbot] START FAIL: {type(e).__name__}: {e}")
+            print("[userbot] STRING_SESSION invalid/expired — only BOT works. Regenerate session.")
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     client = bot or app
     if client:
         try:
+            mode = []
+            if bot:
+                mode.append("BOT")
+            if app:
+                mode.append("UB")
             await notify_owner(
                 client,
                 f"<b>{BOT_NAME} STARTED</b>\n"
-                f"Mode: {'BOT' if bot else ''}{' + UB' if app else ''}\n"
+                f"Mode: {' + '.join(mode) or 'NONE'}\n"
                 f"Time: <code>{now}</code>\n"
-                f"Owner: <code>{OWNER_ID}</code>",
+                f"Owner: <code>{OWNER_ID}</code>\n"
+                f"Try: <code>.ping</code> or bot <code>/help</code>",
             )
         except Exception:
             pass
 
-    print("[READY] Railway worker running")
+    print("[READY] worker running — test .ping on user account / /help on bot")
     await asyncio.Event().wait()
 
 
