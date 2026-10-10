@@ -1,9 +1,7 @@
 """
-PM extras (userbot `app`):
-  - Anti-PM spam: 10 sec mein 5+ msgs → auto block  (.antispam on/off)
-  - PM logger: incoming DM cache; deleted msg → Saved Messages / LOG
-
-PM Guard alag file mein hai (pmguard.py).
+PM extras:
+  .antispam on|off  — 5 msgs / 10s → auto block
+  .pmlog on|off     — deleted DM → LOG_GROUP
 """
 import time
 from collections import defaultdict, deque
@@ -13,17 +11,13 @@ from pyrogram.types import Message
 
 from core.clients import app
 from config import OWNER_ID, LOG_GROUP_ID
-from modules.owner.sudoers import SUDO_USERS, sudo_only
+from modules.owner.sudoers import SUDO_USERS, sudo_only, ub_cmd
 from database.mongo import get_feature, set_feature, get_approved_pm
 
-PREFIXES = [".", "!"]
-
-# spam: user_id -> timestamps
 _SPAM: dict[int, deque] = defaultdict(lambda: deque(maxlen=20))
-SPAM_WINDOW = 10.0   # seconds
-SPAM_LIMIT = 5       # msgs in window
+SPAM_WINDOW = 10.0
+SPAM_LIMIT = 5
 
-# delete logger cache: (chat_id, msg_id) -> info
 _PM_CACHE: dict[tuple[int, int], dict] = {}
 _CACHE_MAX = 500
 
@@ -33,63 +27,61 @@ def _is_privileged(uid: int) -> bool:
 
 
 async def _notify_owner(client, text: str):
-    """Saved Messages + optional LOG_GROUP."""
+    if LOG_GROUP_ID:
+        try:
+            await client.send_message(LOG_GROUP_ID, text)
+            return
+        except Exception:
+            pass
     try:
         me = await client.get_me()
         await client.send_message(me.id, text)
     except Exception:
         pass
-    if LOG_GROUP_ID:
-        try:
-            await client.send_message(LOG_GROUP_ID, text)
-        except Exception:
-            pass
 
 
-# ---------- toggles ----------
-@app.on_message(filters.command("antispam", prefixes=PREFIXES))
+@app.on_message(ub_cmd("antispam"))
 @sudo_only
 async def antispam_toggle(client, message: Message):
     if len(message.command) < 2:
         on = await get_feature("antispam", True)
         await message.reply_text(
-            f"Anti-PM spam is **{'ON' if on else 'OFF'}**.\n"
-            f"`.antispam on` | `.antispam off`"
+            f"Anti-PM spam is <b>{'ON' if on else 'OFF'}</b>.\n"
+            f"<code>.antispam on</code> | <code>.antispam off</code>"
         )
         return
     arg = message.command[1].lower()
     if arg in ("on", "1", "enable"):
         await set_feature("antispam", True)
-        await message.reply_text("✅ Anti-PM spam **ON** (5 msgs / 10s → block).")
+        await message.reply_text("✅ Anti-PM spam <b>ON</b> (5 msgs / 10s → block).")
     elif arg in ("off", "0", "disable"):
         await set_feature("antispam", False)
-        await message.reply_text("❌ Anti-PM spam **OFF**.")
+        await message.reply_text("❌ Anti-PM spam <b>OFF</b>.")
     else:
-        await message.reply_text("Usage: `.antispam on|off`")
+        await message.reply_text("Usage: <code>.antispam on|off</code>")
 
 
-@app.on_message(filters.command("pmlog", prefixes=PREFIXES))
+@app.on_message(ub_cmd("pmlog"))
 @sudo_only
 async def pmlog_toggle(client, message: Message):
     if len(message.command) < 2:
         on = await get_feature("pmlog", True)
         await message.reply_text(
-            f"PM delete-logger is **{'ON' if on else 'OFF'}**.\n"
-            f"`.pmlog on` | `.pmlog off`"
+            f"PM delete-logger is <b>{'ON' if on else 'OFF'}</b>.\n"
+            f"<code>.pmlog on</code> | <code>.pmlog off</code>"
         )
         return
     arg = message.command[1].lower()
     if arg in ("on", "1", "enable"):
         await set_feature("pmlog", True)
-        await message.reply_text("✅ PM logger **ON** (deleted DMs → Saved / LOG).")
+        await message.reply_text("✅ PM logger <b>ON</b> (deleted DMs → LOG).")
     elif arg in ("off", "0", "disable"):
         await set_feature("pmlog", False)
-        await message.reply_text("❌ PM logger **OFF**.")
+        await message.reply_text("❌ PM logger <b>OFF</b>.")
     else:
-        await message.reply_text("Usage: `.pmlog on|off`")
+        await message.reply_text("Usage: <code>.pmlog on|off</code>")
 
 
-# ---------- cache every incoming private msg ----------
 @app.on_message(
     filters.private & filters.incoming & ~filters.bot & ~filters.service,
     group=5,
@@ -101,7 +93,6 @@ async def pm_cache_and_spam(client, message: Message):
     if _is_privileged(uid):
         return
 
-    # --- PM logger cache ---
     if await get_feature("pmlog", True):
         body = message.text or message.caption or ""
         kind = "text"
@@ -129,12 +120,10 @@ async def pm_cache_and_spam(client, message: Message):
             "body": (body or "")[:500],
             "time": time.time(),
         }
-        # trim cache
         if len(_PM_CACHE) > _CACHE_MAX:
             for k in list(_PM_CACHE.keys())[: len(_PM_CACHE) - _CACHE_MAX]:
                 _PM_CACHE.pop(k, None)
 
-    # --- Anti spam ---
     if not await get_feature("antispam", True):
         return
 
@@ -145,7 +134,6 @@ async def pm_cache_and_spam(client, message: Message):
     now = time.time()
     q = _SPAM[uid]
     q.append(now)
-    # drop old
     while q and now - q[0] > SPAM_WINDOW:
         q.popleft()
 
@@ -167,7 +155,6 @@ async def pm_cache_and_spam(client, message: Message):
         )
 
 
-# ---------- deleted private messages ----------
 @app.on_deleted_messages(filters.private)
 async def pm_deleted(client, messages):
     if not await get_feature("pmlog", True):
