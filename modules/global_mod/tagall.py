@@ -1,23 +1,31 @@
 """
-.tagall [msg]  — sab members ek-ek
-.tag [msg]     — same
-.tagadmins / .tagme / .tagallstop
+.tagall [msg]     — sab members (batch mention + message)
+.tag [msg]        — same
+.tagadmins [msg]  — sirf admins
+.tagme            — khud ka mention
+.tagallstop / .tagstop
 """
 import asyncio
 import html
 
 from pyrogram.types import Message
-from pyrogram.errors import FloodWait, RPCError
+from pyrogram.errors import FloodWait, RPCError, ChatAdminRequired
 from pyrogram.enums import ChatMembersFilter, ChatType
 
 from core.clients import app
 from modules.owner.sudoers import ub_cmd, sudo_only
 
+# chat_id -> running flag
 TAG_RUNNING: dict[int, bool] = {}
+
+# Kitne mentions ek message me (Telegram ~ visible mentions limit ~1–10000000 safe)
+BATCH_SIZE = 999999
+# Messages ke beech delay (flood se bachne ke liye)
+DELAY = 1.5
 
 
 def _mention(u) -> str:
-    name = html.escape(u.first_name or "User")
+    name = html.escape((u.first_name or "User").strip() or "User")
     return f'<a href="tg://user?id={u.id}">{name}</a>'
 
 
@@ -28,94 +36,105 @@ def _is_group(message: Message) -> bool:
     )
 
 
-@app.on_message(ub_cmd("tagall", "tag"))
-@sudo_only
-async def tagall_cmd(client, message: Message):
-    if not _is_group(message):
-        await message.reply_text("❌ Sirf <b>group</b> me use karo.")
-        return
+async def _collect_members(client, chat_id: int, admins_only: bool = False) -> list:
+    """
+    Saare members lao.
+    Problem fix:
+    - Default RECENT filter ~999999999 members deta hai → SEARCH + full iterate
+    - Bots / deleted skip
+    """
+    seen: set[int] = set()
+    users = []
 
-    chat_id = message.chat.id
-    if TAG_RUNNING.get(chat_id):
-        await message.reply_text("⏳ Pehle se chal raha — <code>.tagallstop</code>")
-        return
+    filters_to_try = []
+    if admins_only:
+        filters_to_try = [ChatMembersFilter.ADMINISTRATORS]
+    else:
+        # SEARCH se full list; RECENT sirf ~50 deta hai (purani problem)
+        filters_to_try = [
+            ChatMembersFilter.SEARCH,
+            ChatMembersFilter.RECENT,
+        ]
 
-    parts = (message.text or "").split(None, 1)
-    extra = parts[1] if len(parts) > 1 else ""
-
-    TAG_RUNNING[chat_id] = True
-    status = await message.reply_text("👥 <b>Tagall start…</b>\nStop: <code>.tagallstop</code>")
-
-    n = 0
-    try:
-        async for m in client.get_chat_members(chat_id):
-            if not TAG_RUNNING.get(chat_id):
-                break
-            u = m.user
-            if not u or u.is_bot or getattr(u, "is_deleted", False):
-                continue
-            try:
-                text = _mention(u)
-                if extra:
-                    text = text + "\n" + html.escape(extra)
-                await client.send_message(chat_id, text)
-                n += 1
-                await asyncio.sleep(1.4)
-            except FloodWait as e:
-                await asyncio.sleep(min(int(e.value) + 1, 60))
-            except RPCError:
-                continue
-            except Exception:
-                continue
-
-        done = "🛑 Stopped" if not TAG_RUNNING.get(chat_id) else "✅ Done"
+    for f in filters_to_try:
         try:
-            await status.edit_text(f"{done} — tagged <code>{n}</code>")
+            kwargs = {"chat_id": chat_id, "filter": f}
+            # SEARCH ke saath empty query = broadly all (client pe depend)
+            if f == ChatMembersFilter.SEARCH:
+                kwargs["query"] = ""
+            async for m in client.get_chat_members(**kwargs):
+                u = m.user
+                if not u or u.id in seen:
+                    continue
+                if u.is_bot or getattr(u, "is_deleted", False):
+                    continue
+                seen.add(u.id)
+                users.append(u)
+        except ChatAdminRequired:
+            # Non-admin: jo mil sake utna
+            continue
         except Exception:
-            await message.reply_text(f"{done} — tagged <code>{n}</code>")
-    except Exception as e:
-        await message.reply_text(f"❌ <code>{type(e).__name__}: {e}</code>")
-    finally:
-        TAG_RUNNING[chat_id] = False
+            continue
+
+    # Fallback: filter ke bina (kuch clients me full list)
+    if not users and not admins_only:
+        try:
+            async for m in client.get_chat_members(chat_id):
+                u = m.user
+                if not u or u.id in seen:
+                    continue
+                if u.is_bot or getattr(u, "is_deleted", False):
+                    continue
+                seen.add(u.id)
+                users.append(u)
+        except Exception:
+            pass
+
+    return users
 
 
-@app.on_message(ub_cmd("tagadmins"))
-@sudo_only
-async def tagadmins_cmd(client, message: Message):
-    if not _is_group(message):
-        await message.reply_text("❌ Sirf group me.")
-        return
-    parts = (message.text or "").split(None, 1)
-    extra = parts[1] if len(parts) > 1 else ""
-    lines = []
-    try:
-        async for m in client.get_chat_members(
-            message.chat.id, filter=ChatMembersFilter.ADMINISTRATORS
-        ):
-            u = m.user
-            if not u or u.is_bot:
-                continue
-            lines.append(_mention(u))
-        if not lines:
-            await message.reply_text("No admins.")
+async def _send_batches(client, chat_id: int, users: list, extra: str, status: Message):
+    """Message + multiple mentions per batch — message har batch me dikhe."""
+    n = 0
+    total = len(users)
+    batch = []
+
+    async def flush():
+        nonlocal n, batch
+        if not batch:
             return
-        text = "🛡 <b>Admins</b>\n" + " ".join(lines)
+        # Pehle custom message, phir mentions — dono dikhenge
         if extra:
-            text += "\n" + html.escape(extra)
-        await message.reply_text(text)
-    except Exception as e:
-        await message.reply_text(f"❌ <code>{e}</code>")
+            body = html.escape(extra) + "\n\n" + " ".join(batch)
+        else:
+            body = " ".join(batch)
+        try:
+            await client.send_message(chat_id, body)
+            n += len(batch)
+        except FloodWait as e:
+            await asyncio.sleep(min(int(e.value) + 1, 90))
+            try:
+                await client.send_message(chat_id, body)
+                n += len(batch)
+            except Exception:
+                pass
+        except RPCError:
+            pass
+        except Exception:
+            pass
+        batch = []
+        try:
+            await status.edit_text(
+                f"👥 Tagall… <code>{n}/{total}</code>\n"
+                f"Stop: <code>.tagallstop</code>"
+            )
+        except Exception:
+            pass
+        await asyncio.sleep(DELAY)
 
-
-@app.on_message(ub_cmd("tagme"))
-@sudo_only
-async def tagme_cmd(client, message: Message):
-    me = await client.get_me()
-    await message.reply_text(_mention(me))
-
-
-@app.on_message(ub_cmd("tagallstop", "tagstop"))
-@sudo_only
-async def tagstop_cmd(client, message: Message):
-    TAG_RUNNING[message.chat.id] = False
-    await message.reply_text("🛑 Tagall stop signal.")
+    for u in users:
+        if not TAG_RUNNING.get(chat_id):
+            break
+        batch.append(_mention(u))
+     
+... 
